@@ -1,0 +1,142 @@
+﻿@using Codeterpret
+@using Codeterpret.Implementations;
+@using Codeterpret.SQL;
+@using Codeterpret.Common;
+
+@page "/quickscript"
+
+<h3>Database Schema Builder/Translator</h3>
+
+<Field>
+    <FieldLabel>Script Type</FieldLabel>
+    <Select SelectedValue="@fromDBType" TValue="int" SelectedValueChanged="@OnFromDBTypeChanged">
+        <SelectItem Value="1">Quick Script</SelectItem>
+        <SelectItem Value="2">SQL Server</SelectItem>
+        <SelectItem Value="3">MySQL</SelectItem>
+    </Select>
+</Field>
+
+<Alert @ref="fromDBTypeInfo" Color="Color.Info" Dismisable>
+    @if (fromDBType == 1)
+    {
+        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+            Quick Script
+            <CloseButton Clicked="@hideFromDBTypeInfo" />
+        </Heading>
+        <Paragraph>
+            Quick Script is a shorthand script that I came up with, which allows the developer to very quickly define a database schema design, using abbreviated keywords to define table structures and relationships.
+        </Paragraph>
+    }
+
+    @if (fromDBType == 2)
+    {
+        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+            SQL Server
+            <CloseButton Clicked="@hideFromDBTypeInfo" />
+        </Heading>
+        <Paragraph>
+            For best results, it is best to use schema creation script that has been generated from a tool such as SQL Server Management Studio.
+        </Paragraph>
+    }
+
+    @if (fromDBType == 3)
+    {
+        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+            MySQL
+            <CloseButton Clicked="@hideFromDBTypeInfo" />
+        </Heading>
+        <Paragraph>
+            For best results, it is best to use schema creation script that has been generated from a tool such as MySQL Workbench.
+        </Paragraph>
+    }
+
+</Alert>
+
+<Field>
+    <FieldLabel>Script</FieldLabel>
+    <MemoEdit Rows="20" @bind-Text="fromScript"></MemoEdit>
+</Field>
+
+<Divider Type="DividerType.Dashed" />
+
+<Fields>
+    <Field>        
+        <Select TValue="int" @bind-SelectedValue="toDBType">
+            <SelectItem Value="1">SQL Server</SelectItem>
+            <SelectItem Value="2">MySQL</SelectItem>
+        </Select>
+    </Field>
+    <Field>
+        <Button Color="Color.Primary" Clicked="@Generate">Generate</Button>
+    </Field>
+</Fields>
+
+
+<Field>
+    <FieldLabel>SQL Script</FieldLabel>
+    <MemoEdit Rows="25" @bind-Text="generatedSQL"></MemoEdit>
+</Field>
+
+
+
+@code {
+
+    Alert fromDBTypeInfo;
+
+    private int fromDBType = 1;
+    private int toDBType = 1;
+    private string generatedSQL;
+
+    private string infoScriptTitle = "Quick Script";
+    private string fromScript = "t Game\n" +
+"c Id, an, pk\n" +
+"c Title varchar 50\n" +
+"c Description varchar 500\n" +
+"c RatingId int, fk to Rating Id\n\n" +
+
+"t Console\n" +
+"c Id, an, pk\n" +
+"c Name varchar 50\n" +
+"c Description 500\n" +
+"c ManufacturerId int, nn, fk to Manufacturer Id\n\n" +
+
+"t Compatible\n" +
+"c GameId int, nn, fk to Game Id\n" +
+"c Console int, nn, fk to Console Id\n\n" +
+
+"t Manufacturer\n" +
+"c Id, an, pk\n" +
+"c Name varchar 50\n" +
+"c Description varchar 2000\n\n" +
+
+"t Rating\n" +
+"c Id, an, pk\n" +
+"c Name varchar 10\n" +
+"c Description varchar 200";
+
+
+    private async Task Generate()
+    {
+        SQLTableClassBuilder stcb = new SQLTableClassBuilder(fromScript);
+        CSharp cs = new CSharp();
+
+
+        Common.DatabaseTypes dbType = Common.DatabaseTypes.SQLServer;
+        if (toDBType == 2) dbType = Common.DatabaseTypes.MySQL;
+
+        generatedSQL = cs.GenerateSQLScript(stcb.SQLTables, dbType);
+
+    }
+
+    private async Task OnFromDBTypeChanged(int value)
+    {
+        fromDBType = value;
+        StateHasChanged();
+        fromDBTypeInfo.Show();
+    }
+
+    private void hideFromDBTypeInfo()
+    {
+        fromDBTypeInfo.Hide();
+    }
+}
