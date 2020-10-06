@@ -44,7 +44,7 @@ namespace Codeterpret.Implementations
         {
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("/**** WARNING: Because this script was generated from C# Classes which do not include data type precision (length, nullability, foreign key relationships, constraint names,)\r\n column data is only a best guess and should be manually checked for accuracy and/or intention of use *****/\r\n ");
+            //sb.AppendLine("/**** WARNING: Because this script was generated from C# Classes which do not include data type precision (length, nullability, foreign key relationships, constraint names,)\r\n column data is only a best guess and should be manually checked for accuracy and/or intention of use *****/\r\n ");
 
             List<CreateTableBlock> ctbs = new List<CreateTableBlock>();
             foreach (SQLTable st in sqlTableList)
