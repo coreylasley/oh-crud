@@ -3,119 +3,130 @@
 @using Codeterpret.SQL;
 @using Codeterpret.Common;
 
+@inject IJSRuntime JSRuntime
+
 @page "/quickscript"
 
 <h3>Database Schema Builder/Translator</h3>
 
-<Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
-    <Items>
-        <Tab Name="source">Source Database</Tab>
-        <Tab Name="targetSQL">Translated Database</Tab>
-        <Tab Name="backendProject">Backend Project</Tab>
-        <Tab Name="frontendProject">Frontend Project</Tab>
-    </Items>
-    <Content>
-        <TabPanel Name="source">
-            <br />
-            <Field>
-                <FieldLabel><b>Script Type</b></FieldLabel>
-                <Select SelectedValue="@fromDBType" TValue="int" SelectedValueChanged="@OnFromDBTypeChanged">
-                    <SelectItem Value="0">SQL Server</SelectItem>
-                    <SelectItem Value="1">MySQL</SelectItem>
-                    <SelectItem Value="2">Quick Script</SelectItem>
-                </Select>
-            </Field>
-
-            <Alert @ref="fromDBTypeInfo" Color="Color.Info" Dismisable>
-                
-                @if (fromDBType == 2)
-                {
-                    <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
-                        Quick Script
-                        <CloseButton Clicked="@hideFromDBTypeInfo" />
-                    </Heading>
-                    <Paragraph>
-                        Quick Script is a shorthand script that I came up with, which allows the developer to very quickly define a database schema design, using abbreviated keywords to define table structures and relationships.
-
-                    </Paragraph>
-                    <Paragraph>
-                        <Button Color="Color.Info" Clicked="(() => ShowMeExample(2))">Generate Example</Button>
-                    </Paragraph>
-                }
-
-                @if (fromDBType == 0)
-                {
-                    <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
-                        SQL Server
-                        <CloseButton Clicked="@hideFromDBTypeInfo" />
-                    </Heading>
-                    <Paragraph>
-                        For best results, it is best to use schema creation script that has been generated from a tool such as SQL Server Management Studio.
-                    </Paragraph>
-                    <Paragraph>
-                        <Button Color="Color.Info" Clicked="(() => ShowMeExample(0))">Generate Example</Button>
-                    </Paragraph>
-                }
-
-                @if (fromDBType == 1)
-                {
-                    <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
-                        MySQL
-                        <CloseButton Clicked="@hideFromDBTypeInfo" />
-                    </Heading>
-                    <Paragraph>
-                        For best results, it is best to use schema creation script that has been generated from a tool such as MySQL Workbench.
-                    </Paragraph>
-                    <Paragraph>
-                        <Button Color="Color.Info" Clicked="(() => ShowMeExample(1))">Generate Example</Button>
-                    </Paragraph>
-                }
-
-            </Alert>
-
-            <Field>
-                <FieldLabel><b>Script</b></FieldLabel>
-                <MemoEdit Rows="20" @bind-Text="fromScript"></MemoEdit>
-            </Field>
-        </TabPanel>
-        <TabPanel Name="targetSQL">
-            <br />
-            <Field>
-                <Label>Generate a database schema script from the <b>Source</b> script if you wish to translate to a different database type.</Label>
-            </Field>
-            <Fields>
+<Form>
+    <Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
+        <Items>
+            <Tab Name="source">Source Database</Tab>
+            <Tab Name="targetSQL">Translated Database</Tab>
+            <Tab Name="backendProject">Backend Project</Tab>
+            <Tab Name="frontendProject">Frontend Project</Tab>
+        </Items>
+        <Content>
+            <TabPanel Name="source">
+                <br />
                 <Field>
-                    <Select TValue="int" @bind-SelectedValue="toDBType">
-                        <SelectItem Value="1">SQL Server</SelectItem>
-                        <SelectItem Value="2">MySQL</SelectItem>
+                    <FieldLabel><b>Script Type</b></FieldLabel>
+                    <Select SelectedValue="@fromDBType" TValue="int" SelectedValueChanged="@OnFromDBTypeChanged">
+                        <SelectItem Value="0">SQL Server</SelectItem>
+                        <SelectItem Value="1">MySQL</SelectItem>
+                        <SelectItem Value="2">Quick Script</SelectItem>
                     </Select>
                 </Field>
+
+                <Alert @ref="fromDBTypeInfo" Color="Color.Info" Dismisable>
+
+                    @if (fromDBType == 2)
+                    {
+                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+                            Quick Script
+                            <CloseButton Clicked="@hideFromDBTypeInfo" />
+                        </Heading>
+                        <Paragraph>
+                            Quick Script is a shorthand script that I came up with, which allows the developer to very quickly define a database schema design, using abbreviated keywords to define table structures and relationships.
+
+                        </Paragraph>
+                        <Paragraph>
+                            <Button Color="Color.Info" Clicked="(() => ShowMeExample(2))">Generate Example</Button>
+                        </Paragraph>
+                    }
+
+                    @if (fromDBType == 0)
+                    {
+                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+                            SQL Server
+                            <CloseButton Clicked="@hideFromDBTypeInfo" />
+                        </Heading>
+                        <Paragraph>
+                            For best results, it is best to use schema creation script that has been generated from a tool such as SQL Server Management Studio.
+                        </Paragraph>
+                        <Paragraph>
+                            <Button Color="Color.Info" Clicked="(() => ShowMeExample(0))">Generate Example</Button>
+                        </Paragraph>
+                    }
+
+                    @if (fromDBType == 1)
+                    {
+                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+                            MySQL
+                            <CloseButton Clicked="@hideFromDBTypeInfo" />
+                        </Heading>
+                        <Paragraph>
+                            For best results, it is best to use schema creation script that has been generated from a tool such as MySQL Workbench.
+                        </Paragraph>
+                        <Paragraph>
+                            <Button Color="Color.Info" Clicked="(() => ShowMeExample(1))">Generate Example</Button>
+                        </Paragraph>
+                    }
+
+                </Alert>
+
                 <Field>
-                    <Button Color="Color.Primary" Clicked="@Generate">Generate</Button>
+                    <FieldLabel><b>Script</b></FieldLabel>
+                    <MemoEdit Rows="20" @bind-Text="fromScript"></MemoEdit>
                 </Field>
-            </Fields>
+            </TabPanel>
+            <TabPanel Name="targetSQL">
+                <br />
+                <Field>
+                    <Label>Generate a database schema script from the <b>Source</b> script if you wish to translate to a different database type.</Label>
+                </Field>
+                <Fields>
+                    <Field>
+                        <Select TValue="int" @bind-SelectedValue="toDBType">
+                            <SelectItem Value="1">SQL Server</SelectItem>
+                            <SelectItem Value="2">MySQL</SelectItem>
+                        </Select>
+                    </Field>
+                    <Field>
+                        <Button Color="Color.Primary" Clicked="@Generate">Generate</Button>
+                    </Field>
+                </Fields>
 
 
-            <Field>
-                <FieldLabel><b>SQL Script</b></FieldLabel>
-                <MemoEdit Rows="25" @bind-Text="generatedSQL"></MemoEdit>
-            </Field>
+                <Field>
+                    <FieldLabel><b>SQL Script</b></FieldLabel>
+                    <!--
+                    <MemoEdit Rows="25"  @bind-Text="generatedSQL"></MemoEdit>
+                        -->
+                    <textarea id="toSql" name="toSql" @bind="generatedSQL"></textarea>
 
-        </TabPanel>
-        <TabPanel Name="backendProject">
-            <br />
-            <Field>
-                <Label>Generate a backend project from the sql script. <br /><br />Coming soon....</Label>
-            </Field>
-        </TabPanel>
-        <TabPanel Name="frontendProject">
-            <br />
-            <Field>
-                <Label>Generate a frontend project from the sql script. <br /><br />Coming soon....</Label>
-            </Field>
-        </TabPanel>
-    </Content>
-</Tabs>
+                </Field>
+
+
+
+            </TabPanel>
+            <TabPanel Name="backendProject">
+                <br />
+                <Field>
+                    <Label>Generate a backend project from the sql script. <br /><br />Coming soon....</Label>
+                </Field>
+            </TabPanel>
+            <TabPanel Name="frontendProject">
+                <br />
+                <Field>
+                    <Label>Generate a frontend project from the sql script. <br /><br />Coming soon....</Label>
+                </Field>
+            </TabPanel>
+        </Content>
+    </Tabs>
+</Form>
+
 
 
 
@@ -160,6 +171,7 @@
                                 "c Name varchar 10\n" +
                                 "c Description varchar 200";
 
+
     protected override async Task OnInitializedAsync()
     {
 
@@ -173,7 +185,36 @@
             fromDBType = 2;
             fromDBTypeInfo.Show();
             StateHasChanged();
+
+            await SetupCodeMirror("");
         }
+    }
+
+    private async Task SetupCodeMirror(string code)
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<object>("CodeMirrorToSql", code);
+        }
+        catch (Exception ex)
+        {
+
+        }
+
+    }
+
+
+    private async Task SetToSqlCode(string code)
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<object>("SetToSqlCode", code);
+        }
+        catch (Exception ex)
+        {
+
+        }
+
     }
 
 
@@ -187,6 +228,7 @@
         if (toDBType == 2) dbType = Common.DatabaseTypes.MySQL;
 
         generatedSQL = cs.GenerateSQLScript(stcb.SQLTables, dbType);
+        await SetToSqlCode(generatedSQL);
 
         selectedTab = "targetSQL";
 
