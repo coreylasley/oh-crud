@@ -5,9 +5,9 @@
 
 @inject IJSRuntime JSRuntime
 
-@page "/quickscript"
+@page "/builder"
 
-<h3>Database Schema Builder/Translator</h3>
+<h2><b>Database Schema Translator and Project Builder</b></h2>
 
 <Form>
     <Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
@@ -20,6 +20,9 @@
         <Content>
             <TabPanel Name="source">
                 <br />
+                <Label>
+                    Here you write or paste a schema creation script that you want translated to SQL Server or MySQL. You can convert a SQL Server schema creation script to MySQL and visa versa. You also have the option of writing a QuickScript which allows you to quickly define a schema that can be translated to SQL Server of MySQL. More database types will be made available as time permits me to write translating code.
+                </Label>
                 <Field>
                     <FieldLabel><b>Script Type</b></FieldLabel>
                     <Select SelectedValue="@fromDBType" TValue="int" SelectedValueChanged="@OnFromDBTypeChanged">
@@ -78,7 +81,7 @@
 
                 <Field>
                     <FieldLabel><b>Script</b></FieldLabel>
-                    <MemoEdit Rows="20" @bind-Text="fromScript"></MemoEdit>
+                    <textarea id="fromSql" name="fromSql" @bind="fromScript"></textarea>
                 </Field>
             </TabPanel>
             <TabPanel Name="targetSQL">
@@ -98,29 +101,26 @@
                     </Field>
                 </Fields>
 
-
+                @if (initializedToSql)
+                {
                 <Field>
                     <FieldLabel><b>SQL Script</b></FieldLabel>
-                    <!--
-                    <MemoEdit Rows="25"  @bind-Text="generatedSQL"></MemoEdit>
-                        -->
                     <textarea id="toSql" name="toSql" @bind="generatedSQL"></textarea>
-
                 </Field>
-
+                }
 
 
             </TabPanel>
             <TabPanel Name="backendProject">
                 <br />
                 <Field>
-                    <Label>Generate a backend project from the sql script. <br /><br />Coming soon....</Label>
+                    <Label><b>Coming soon:</b> Generate a backend project from the sql script. Currently a .NET Core 3.1 Web API with Dapper is being developed.</Label>
                 </Field>
             </TabPanel>
             <TabPanel Name="frontendProject">
                 <br />
                 <Field>
-                    <Label>Generate a frontend project from the sql script. <br /><br />Coming soon....</Label>
+                    <Label><b>Coming soon:</b> Generate a frontend project from the sql script. Currently an Angular 10+ translator is being developed.</Label>
                 </Field>
             </TabPanel>
         </Content>
@@ -142,6 +142,7 @@
     private int fromDBType = 2;
     private int toDBType = 1;
     private string generatedSQL;
+    private bool initializedToSql = false;
 
     private string infoScriptTitle = "Quick Script";
     private string fromScript = "";
@@ -186,21 +187,37 @@
             fromDBTypeInfo.Show();
             StateHasChanged();
 
-            await SetupCodeMirror("");
+            await SetupCodeMirror("", "");
         }
     }
 
-    private async Task SetupCodeMirror(string code)
+    private async Task SetupCodeMirror(string fromCode, string toCode)
     {
         try
         {
-            await JSRuntime.InvokeAsync<object>("CodeMirrorToSql", code);
+            await JSRuntime.InvokeAsync<object>("CodeMirrorFromSql", fromCode);
         }
         catch (Exception ex)
         {
 
         }
+    }
 
+    private async Task<string> GetFromCode()
+    {
+        return await JSRuntime.InvokeAsync<string>("GetFromSqlCode");
+    }
+
+    private async Task SetFromSqlCode(string code)
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<object>("SetFromSqlCode", code);
+        }
+        catch (Exception ex)
+        {
+
+        }
     }
 
 
@@ -214,15 +231,22 @@
         {
 
         }
-
     }
 
 
     private async Task Generate()
     {
+        fromScript = await GetFromCode();
         SQLTableClassBuilder stcb = new SQLTableClassBuilder(fromScript);
         CSharp cs = new CSharp();
 
+        if (!initializedToSql)
+        {
+            initializedToSql = true;
+
+            StateHasChanged();
+            await JSRuntime.InvokeAsync<object>("CodeMirrorToSql", "");
+        }
 
         Common.DatabaseTypes dbType = Common.DatabaseTypes.SQLServer;
         if (toDBType == 2) dbType = Common.DatabaseTypes.MySQL;
@@ -246,16 +270,28 @@
         fromDBTypeInfo.Hide();
     }
 
-    private void ShowMeExample(int dbTypeToShow)
+    private async Task ShowMeExample(int dbTypeToShow)
     {
         SQLTableClassBuilder stcb = new SQLTableClassBuilder(exampleQuickScript);
         CSharp cs = new CSharp();
 
         fromScript = dbTypeToShow == 2 ? exampleQuickScript : cs.GenerateSQLScript(stcb.SQLTables, (Common.DatabaseTypes)dbTypeToShow);
+        await SetFromSqlCode(fromScript);
     }
 
-    public void OnSelectedTabChanged(string name)
+    public async Task OnSelectedTabChanged(string name)
     {
         selectedTab = name;
+        StateHasChanged();
+        await OnSelectedPanelChanged();
+
+    }
+
+    public async Task OnSelectedPanelChanged()
+    {
+        if (selectedTab == "targetSQL" && !initializedToSql)
+        {
+
+        }
     }
 }
