@@ -1,10 +1,28 @@
 ﻿@page "/"
-    <h1>Welcome to Codeterpret!</h1>
-    Codeterpret is a web based tool used, under development by <a href="https://www.coreylasley.com">Corey Lasley</a>, which can be used to translate database schema creation scripts, and generate back-end services and front-end applications from a schema creation script. The end goal is to help save developers from the monotony of having to write code for all of the CRUD operations the app will need.
-    <br />
-    <br />
-    If you would like to contribute to this effort, please take a look at the <a href="https://github.com/coreylasley/codeterpret">GitHub repo</a>.
-    <br />
-    <br />
-    <a href="builder">Get Started!</a>
+@inject NavigationManager NavManager
 
+
+<div align="center"><img class="logo" src="../images/mediumlogo.png" /></div>
+
+<h1><b>Welcome to Codeterpret!</b></h1>
+Currently in the early stages of development, Codeterpret is a web based tool which can be used to create/translate database schema creation scripts,
+generate back-end services/APIs and front-end applications, all from a database schema script. The end goal here is to help save developers from the
+monotony of having to write much of the code needed for the basic operations of a web app.
+<br />
+<br />
+If you would like to contribute to this effort, please take a look at the <a href="https://github.com/coreylasley/codeterpret">GitHub repo</a>.
+<br />
+<br />
+<div align="center">
+    <Button Clicked="@GotoBuilder" Color="Color.Secondary">Get Started!</Button>
+</div>
+
+@code
+{
+
+public void GotoBuilder()
+{
+    NavManager.NavigateTo("builder");
+}
+
+}

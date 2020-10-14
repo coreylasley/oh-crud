@@ -129,11 +129,6 @@
 
 
 
-
-
-
-
-
 @code {
 
     string selectedTab;
@@ -143,8 +138,7 @@
     private int toDBType = 1;
     private string generatedSQL;
     private bool initializedToSql = false;
-
-    private string infoScriptTitle = "Quick Script";
+        
     private string fromScript = "";
     private string exampleQuickScript = "t Game\n" +
                                 "c Id, an, pk\n" +
@@ -193,14 +187,7 @@
 
     private async Task SetupCodeMirror(string fromCode, string toCode)
     {
-        try
-        {
-            await JSRuntime.InvokeAsync<object>("CodeMirrorFromSql", fromCode);
-        }
-        catch (Exception ex)
-        {
-
-        }
+        await JSRuntime.InvokeAsync<object>("CodeMirrorFromSql", fromCode);     
     }
 
     private async Task<string> GetFromCode()
@@ -209,28 +196,13 @@
     }
 
     private async Task SetFromSqlCode(string code)
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<object>("SetFromSqlCode", code);
-        }
-        catch (Exception ex)
-        {
-
-        }
+    {        
+        await JSRuntime.InvokeVoidAsync("SetFromSqlCode", code);        
     }
 
-
     private async Task SetToSqlCode(string code)
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<object>("SetToSqlCode", code);
-        }
-        catch (Exception ex)
-        {
-
-        }
+    {        
+        await JSRuntime.InvokeVoidAsync("SetToSqlCode", code);        
     }
 
 
@@ -258,7 +230,7 @@
 
     }
 
-    private async Task OnFromDBTypeChanged(int value)
+    private void OnFromDBTypeChanged(int value)
     {
         fromDBType = value;
         StateHasChanged();
