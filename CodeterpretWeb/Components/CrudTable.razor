@@ -1,0 +1,53 @@
+﻿@using Codeterpret
+@using Codeterpret.Implementations;
+@using Codeterpret.SQL;
+@using Codeterpret.Common;
+
+
+@if (SQLTables != null)
+{
+    <Field>
+        <FieldLabel>Backend Project Type</FieldLabel>
+        <Select TValue="int">
+            <SelectItem Value="1">C# .NET Core 3.1 with Dapper</SelectItem>
+        </Select>
+    </Field>
+   
+ <Label>Select the CRUD operations for each table that you wish to generate service methods for</Label>
+<Table Hoverable="true" Striped="true" Narrow="true">
+    <TableHeader ThemeContrast="ThemeContrast.Dark">
+        <TableRow>
+            <TableHeaderCell>Table</TableHeaderCell>
+            <TableHeaderCell>Create</TableHeaderCell>
+            <TableHeaderCell>Read</TableHeaderCell>
+            <TableHeaderCell>Update</TableHeaderCell>
+            <TableHeaderCell>Delete</TableHeaderCell>
+        </TableRow>
+    </TableHeader>
+    <TableBody>
+        @foreach (var t in SQLTables)
+        {
+        <TableRow>
+            <TableRowHeader>@t.Name</TableRowHeader>
+            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
+        </TableRow>
+        }
+    </TableBody>
+</Table>
+}
+
+
+@code {
+
+    public List<SQLTable> SQLTables { get; set; }
+
+    public void Refresh()
+    {
+        StateHasChanged();
+    }
+
+
+}

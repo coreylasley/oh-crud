@@ -2,6 +2,7 @@
 @using Codeterpret.Implementations;
 @using Codeterpret.SQL;
 @using Codeterpret.Common;
+@using CodeterpretWeb.Components;
 
 @inject IJSRuntime JSRuntime
 
@@ -14,8 +15,8 @@
         <Items>
             <Tab Name="source">Source Database</Tab>
             <Tab Name="targetSQL">Translated Database</Tab>
-            <Tab Name="backendProject">Backend Project</Tab>
-            <Tab Name="frontendProject">Frontend Project</Tab>
+            <Tab Name="backendProject">Back End Project</Tab>
+            <Tab Name="frontendProject">Front End Project</Tab>
         </Items>
         <Content>
             <TabPanel Name="source">
@@ -115,6 +116,9 @@
                 <br />
                 <Field>
                     <Label><b>Coming soon:</b> Generate a backend project from the sql script. Currently a .NET Core 3.1 Web API with Dapper is being developed.</Label>
+                    <br /><br />
+                    <CrudTable @ref="crudTable"></CrudTable>
+
                 </Field>
             </TabPanel>
             <TabPanel Name="frontendProject">
@@ -133,6 +137,7 @@
 
     string selectedTab;
     Alert fromDBTypeInfo;
+    CrudTable crudTable;
 
     private int fromDBType = 2;
     private int toDBType = 1;
@@ -227,6 +232,9 @@
         await SetToSqlCode(generatedSQL);
 
         selectedTab = "targetSQL";
+
+        crudTable.SQLTables = stcb.SQLTables;
+        crudTable.Refresh();
 
     }
 
