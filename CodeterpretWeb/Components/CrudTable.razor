@@ -2,16 +2,27 @@
 @using Codeterpret.Implementations;
 @using Codeterpret.SQL;
 @using Codeterpret.Common;
+@using System.Linq;
 
 
 @if (SQLTables != null)
 {
+<Fields>
     <Field>
         <FieldLabel>Backend Project Type</FieldLabel>
-        <Select TValue="int">
-            <SelectItem Value="1">C# .NET Core 3.1 with Dapper</SelectItem>
+        <Select TValue="Common.BackEndProjectTypes" @bind-SelectedValue="@BackEndProjectType">
+            <SelectItem Value="Common.BackEndProjectTypes.CSharpNETCore31Dapper">C# .NET Core 3.1 with Dapper</SelectItem>
         </Select>
     </Field>
+    <Field>
+        <FieldLabel>Service Class Organization</FieldLabel>
+        <Select TValue="Common.ServiceOrganizationTypes" @bind-SelectedValue="@ServiceOrganizationType">
+            <SelectItem Value="Common.ServiceOrganizationTypes.AllSameClass">Everything in same Class</SelectItem>
+            <SelectItem Value="Common.ServiceOrganizationTypes.AllSameClass">In Class by Table (i.e. @(SQLTables[0].Name + "Service"))</SelectItem>
+            <SelectItem Value="Common.ServiceOrganizationTypes.AllSameClass">In Class by CRUD Operation (i.e. CreateService)</SelectItem>
+        </Select>
+    </Field>
+</Fields>
    
  <Label>Select the CRUD operations for each table that you wish to generate service methods for</Label>
 <Table Hoverable="true" Striped="true" Narrow="true">
@@ -22,6 +33,7 @@
             <TableHeaderCell>Read</TableHeaderCell>
             <TableHeaderCell>Update</TableHeaderCell>
             <TableHeaderCell>Delete</TableHeaderCell>
+            <TableHeaderCell>Service Class Name <i>(Override above selection)</i></TableHeaderCell>
         </TableRow>
     </TableHeader>
     <TableBody>
@@ -29,10 +41,11 @@
         {
         <TableRow>
             <TableRowHeader>@t.Name</TableRowHeader>
-            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
-            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
-            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
-            <TableRowCell><Check TValue="bool"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Create))"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Read))"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Update))"></Check></TableRowCell>
+            <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Delete))"></Check></TableRowCell>
+            <TableRowCell><TextEdit Placeholder="@("i.e. " + t.Name + "Service")"></TextEdit></TableRowCell>
         </TableRow>
         }
     </TableBody>
@@ -43,10 +56,34 @@
 @code {
 
     public List<SQLTable> SQLTables { get; set; }
+    public Common.BackEndProjectTypes BackEndProjectType;
+    public Common.ServiceOrganizationTypes ServiceOrganizationType;
 
     public void Refresh()
     {
         StateHasChanged();
+    }
+
+    private void checkValueChanged(string tableName, Common.CRUDTypes crudType)
+    {
+        foreach(var st in SQLTables.Where(x => x.Name == tableName))
+        {
+            switch(crudType)
+            {
+                case Common.CRUDTypes.Create:
+                    st.GenerateCreate = !st.GenerateCreate;
+                    break;
+                case Common.CRUDTypes.Read:
+                    st.GenerateRead = !st.GenerateRead;
+                    break;
+                case Common.CRUDTypes.Update:
+                    st.GenerateUpdate = !st.GenerateUpdate;
+                    break;
+                case Common.CRUDTypes.Delete:
+                    st.GenerateDelete = !st.GenerateDelete;
+                    break;
+            }
+        }
     }
 
 

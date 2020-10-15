@@ -16,6 +16,13 @@ namespace Codeterpret.SQL
         public string Schema { get; set; }
         public List<SQLColumn> SQLColumns { get; }
 
+        // Properties used to flag table for code generation requirements
+        public bool GenerateCreate { get; set; }
+        public bool GenerateRead { get; set; }
+        public bool GenerateUpdate { get; set; }
+        public bool GenerateDelete { get; set; }
+
+
         /// <summary>
         /// Return all Foreign Keys associated to this SQLTable
         /// </summary>

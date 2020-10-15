@@ -38,6 +38,18 @@ namespace Codeterpret.Common
             Delete
         }
 
+        public enum BackEndProjectTypes
+        {
+            CSharpNETCore31Dapper = 1
+        }
+
+        public enum ServiceOrganizationTypes
+        {
+            AllSameClass = 1,
+            ClassPerTable = 2,
+            ClassPerCRUDType = 3
+        }
+
         protected string localVariable(string name)
         {
             if (name == "ID") name = "Id";
