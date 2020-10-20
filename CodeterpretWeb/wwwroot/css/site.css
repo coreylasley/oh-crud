@@ -151,6 +151,8 @@ app {
 }
 
 @media (max-width: 767.98px) {
+
+
     .main .top-row:not(.auth) {
         display: none;
     }
@@ -165,12 +167,13 @@ app {
 }
 
 @media (min-width: 768px) {
+/*
     app {
         flex-direction: row;
     }
 
     .sidebar {
-        width: 250px;
+        width: 185px;
         height: 100vh;
         position: sticky;
         top: 0;
@@ -191,7 +194,19 @@ app {
     }
 
     .sidebar .collapse {
-        /* Never collapse the sidebar for wide screens */
+     
         display: block;
+    }
+    */
+    .main .top-row:not(.auth) {
+        display: none;
+    }
+
+    .main .top-row.auth {
+        justify-content: space-between;
+    }
+
+    .main .top-row a, .main .top-row .btn-link {
+        margin-left: 0;
     }
 }

@@ -8,7 +8,7 @@
 
 @page "/builder"
 
-<h2><b>Database Schema Translator and Project Builder</b></h2>
+<h3><b>Database Schema Translator and Project Builder</b></h3>
 
 <Form>
     <Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
@@ -33,11 +33,11 @@
                     </Select>
                 </Field>
 
-                <Alert @ref="fromDBTypeInfo" Color="Color.Info" Dismisable>
+                <Alert @ref="fromDBTypeInfo" Color="Color.Light"  Dismisable>
 
                     @if (fromDBType == 2)
                     {
-                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Dark">
                             Quick Script
                             <CloseButton Clicked="@hideFromDBTypeInfo" />
                         </Heading>
@@ -46,13 +46,13 @@
 
                         </Paragraph>
                         <Paragraph>
-                            <Button Color="Color.Info" Clicked="(() => ShowMeExample(2))">Generate Example</Button>
+                            <Button Color="Color.Secondary" Clicked="(() => ShowMeExample(2))">Generate Example</Button>
                         </Paragraph>
                     }
 
                     @if (fromDBType == 0)
                     {
-                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Dark">
                             SQL Server
                             <CloseButton Clicked="@hideFromDBTypeInfo" />
                         </Heading>
@@ -60,13 +60,13 @@
                             For best results, it is best to use schema creation script that has been generated from a tool such as SQL Server Management Studio.
                         </Paragraph>
                         <Paragraph>
-                            <Button Color="Color.Info" Clicked="(() => ShowMeExample(0))">Generate Example</Button>
+                            <Button Color="Color.Secondary" Clicked="(() => ShowMeExample(0))">Generate Example</Button>
                         </Paragraph>
                     }
 
                     @if (fromDBType == 1)
                     {
-                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Success">
+                        <Heading Size="HeadingSize.Is4" TextColor="TextColor.Dark">
                             MySQL
                             <CloseButton Clicked="@hideFromDBTypeInfo" />
                         </Heading>
@@ -74,7 +74,7 @@
                             For best results, it is best to use schema creation script that has been generated from a tool such as MySQL Workbench.
                         </Paragraph>
                         <Paragraph>
-                            <Button Color="Color.Info" Clicked="(() => ShowMeExample(1))">Generate Example</Button>
+                            <Button Color="Color.Secondary" Clicked="(() => ShowMeExample(1))">Generate Example</Button>
                         </Paragraph>
                     }
 
@@ -82,7 +82,7 @@
 
                 <Field>
                     <FieldLabel><b>Script</b></FieldLabel>
-                    <textarea id="fromSql" name="fromSql" @bind="fromScript"></textarea>
+                    <textarea rows="30" id="fromSql" name="fromSql" @bind="fromScript"></textarea>
                 </Field>
             </TabPanel>
             <TabPanel Name="targetSQL">
@@ -102,12 +102,18 @@
                     </Field>
                 </Fields>
 
+                <Alert @ref="translateFailed" Color="Color.Danger" Dismisable>
+                    <AlertMessage>Opps!</AlertMessage>
+                    <AlertDescription>Something went terribly wrong when attempting to translating your Source SQL</AlertDescription>
+                    <CloseButton Clicked="@hidetranslateFailed" />
+                </Alert>
+
                 @if (initializedToSql)
                 {
-                <Field>
-                    <FieldLabel><b>SQL Script</b></FieldLabel>
-                    <textarea id="toSql" name="toSql" @bind="generatedSQL"></textarea>
-                </Field>
+                    <Field>
+                        <FieldLabel><b>SQL Script</b></FieldLabel>
+                        <textarea rows="30" id="toSql" name="toSql" @bind="generatedSQL"></textarea>
+                    </Field>
                 }
 
 
@@ -137,13 +143,14 @@
 
     string selectedTab;
     Alert fromDBTypeInfo;
+    Alert translateFailed;
     CrudTable crudTable;
 
     private int fromDBType = 2;
     private int toDBType = 1;
     private string generatedSQL;
     private bool initializedToSql = false;
-        
+
     private string fromScript = "";
     private string exampleQuickScript = "t Game\n" +
                                 "c Id, an, pk\n" +
@@ -192,7 +199,7 @@
 
     private async Task SetupCodeMirror(string fromCode, string toCode)
     {
-        await JSRuntime.InvokeAsync<object>("CodeMirrorFromSql", fromCode);     
+        await JSRuntime.InvokeAsync<object>("CodeMirrorFromSql", fromCode);
     }
 
     private async Task<string> GetFromCode()
@@ -201,40 +208,55 @@
     }
 
     private async Task SetFromSqlCode(string code)
-    {        
-        await JSRuntime.InvokeVoidAsync("SetFromSqlCode", code);        
+    {
+        await JSRuntime.InvokeVoidAsync("SetFromSqlCode", code);
     }
 
     private async Task SetToSqlCode(string code)
-    {        
-        await JSRuntime.InvokeVoidAsync("SetToSqlCode", code);        
+    {
+        await JSRuntime.InvokeVoidAsync("SetToSqlCode", code);
     }
 
 
     private async Task Generate()
     {
-        fromScript = await GetFromCode();
-        SQLTableClassBuilder stcb = new SQLTableClassBuilder(fromScript);
-        CSharp cs = new CSharp();
-
-        if (!initializedToSql)
+        try
         {
-            initializedToSql = true;
+            fromScript = await GetFromCode();
+            SQLTableClassBuilder stcb = new SQLTableClassBuilder(fromScript);
+            CSharp cs = new CSharp();
 
-            StateHasChanged();
-            await JSRuntime.InvokeAsync<object>("CodeMirrorToSql", "");
+            if (!initializedToSql)
+            {
+                initializedToSql = true;
+
+                StateHasChanged();
+                await JSRuntime.InvokeAsync<object>("CodeMirrorToSql", "");
+            }
+
+            Common.DatabaseTypes dbType = Common.DatabaseTypes.SQLServer;
+            if (toDBType == 2) dbType = Common.DatabaseTypes.MySQL;
+
+            generatedSQL = cs.GenerateSQLScript(stcb.SQLTables, dbType);
+
+            if (generatedSQL == "" & fromScript != "")
+            {
+                translateFailed.Show();
+            }
+            else
+            {
+                await SetToSqlCode(generatedSQL);
+
+                selectedTab = "targetSQL";
+
+                crudTable.SQLTables = stcb.SQLTables;
+                crudTable.Refresh();
+            }
         }
-
-        Common.DatabaseTypes dbType = Common.DatabaseTypes.SQLServer;
-        if (toDBType == 2) dbType = Common.DatabaseTypes.MySQL;
-
-        generatedSQL = cs.GenerateSQLScript(stcb.SQLTables, dbType);
-        await SetToSqlCode(generatedSQL);
-
-        selectedTab = "targetSQL";
-
-        crudTable.SQLTables = stcb.SQLTables;
-        crudTable.Refresh();
+        catch
+        {
+            translateFailed.Show();
+        }
 
     }
 
@@ -248,6 +270,11 @@
     private void hideFromDBTypeInfo()
     {
         fromDBTypeInfo.Hide();
+    }
+
+    private void hidetranslateFailed()
+    {
+        translateFailed.Hide();
     }
 
     private async Task ShowMeExample(int dbTypeToShow)

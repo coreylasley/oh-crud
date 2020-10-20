@@ -25,7 +25,7 @@ window.CodeMirrorFromSql = (code) => {
         matchBrackets: true,
         autofocus: true,
         extraKeys: { "Ctrl-Space": "autocomplete" },
-        viewportMargin: 100
+        viewportMargin: Infinity
     });
 };
 
@@ -40,6 +40,6 @@ window.CodeMirrorToSql = (code) => {
         matchBrackets: true,
         autofocus: true,
         extraKeys: { "Ctrl-Space": "autocomplete" },
-        viewportMargin: 100
+        viewportMargin: Infinity
     });
 };

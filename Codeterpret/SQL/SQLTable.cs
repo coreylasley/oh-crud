@@ -156,6 +156,11 @@ namespace Codeterpret.SQL
                                     // The second item will represent the actual table name
                                     Name = tparts[1].Trim();
                                 }
+                                else // If we only have 1 item, there must not be a schema named
+                                {
+                                    Schema = "";
+                                    Name = tparts[0].Trim();
+                                }
                             }
                         }
                         else // If this is not a CREATE TABLE line
@@ -176,6 +181,11 @@ namespace Codeterpret.SQL
                             {
                                 Schema = dparts[0];
                                 Name = dparts[1];
+                            }
+                            else
+                            {
+                                Schema = "";
+                                Name = dparts[0];
                             }
                         }
                         else
