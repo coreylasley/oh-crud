@@ -20,7 +20,7 @@ namespace TestConsole
             SQLTableClassBuilder stcb = new SQLTableClassBuilder(sql);
 
             CSharp cs = new CSharp();
-            cs.GenerateProject(stcb.SQLTables, Codeterpret.Common.Common.DatabaseTypes.SQLServer, @"c:\temp", "codeterpret_test", "dapper", true);
+            //cs.GenerateProject(stcb.SQLTables, Codeterpret.Common.Common.DatabaseTypes.SQLServer, @"c:\temp", "codeterpret_test", "dapper", true);
 
             Console.WriteLine("Done!!");
         }

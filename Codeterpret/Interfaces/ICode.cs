@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using static Codeterpret.Common.Common;
 using Codeterpret.SQL;
+using Codeterpret.Common;
 
 namespace Codeterpret.Interfaces
 {
@@ -47,6 +48,6 @@ namespace Codeterpret.Interfaces
         /// <param name="tables"></param>
         /// <param name="rootPath"></param>
         /// <returns></returns>
-        bool GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string rootPath, string projectName, string orm, bool seperateFilesPerTable = false);
+        IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false);
     }
 }

@@ -7,6 +7,7 @@ using System.IO;
 using Codeterpret.SQL;
 using System.IO.Compression;
 using static Codeterpret.Common.Common;
+using Codeterpret.Common;
 
 namespace Codeterpret.Implementations
 {
@@ -599,21 +600,26 @@ namespace Codeterpret.Implementations
             return ret;
         }
 
-        public override bool GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string rootPath, string projectName, string orm, bool seperateFilesPerTable = false)
+        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false)
         {
+            List<ProjectItem> ret = new List<ProjectItem>();
+            ret.Add(new ProjectItem { Name = projectName, ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() } );
+
             List<string> interfaceMethods = new List<string>();
             List<string> serviceMethods = new List<string>();
             List<string> controllerMethods = new List<string>();
             string code = "";
 
+            /*
             CreateDir(rootPath);
             CreateDir(rootPath + "Interfaces");
             CreateDir(rootPath + "Services");
             CreateDir(rootPath + "Controllers");
             CreateDir(rootPath + "Models");
-
+            
             if (!rootPath.EndsWith("\\")) rootPath += "\\";
             rootPath += projectName + (!projectName.EndsWith("\\") ? "\\" : "");
+            */
 
             // If all the table code exists in a single Service and a single Controller....
             if (!seperateFilesPerTable)
@@ -626,21 +632,27 @@ namespace Codeterpret.Implementations
                 {
                     code += s + "\n\n";
                 }
-                WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
+                //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
+                ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[0].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
 
                 code = "";
                 foreach (string s in serviceMethods)
                 {
                     code += s + "\n\n";
                 }
-                WriteFile(rootPath + "Services\\DataService.cs", code);
+                //WriteFile(rootPath + "Services\\DataService.cs", code);
+                ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[1].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
 
                 code = "";
                 foreach (string s in controllerMethods)
                 {
                     code += s + "\n\n";
                 }
-                WriteFile(rootPath + "Controllers\\DataController.cs", code);
+                //WriteFile(rootPath + "Controllers\\DataController.cs", code);
+                ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[2].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = code });
 
             }
             else // If we want each table represented in its own Service and Controller
@@ -657,19 +669,20 @@ namespace Codeterpret.Implementations
                     startupInjections.Add($"I{tables[x].Name}Service", $"{tables[x].Name}Service");
 
                     // Write the Interface class
-                    WriteFile(rootPath + $"Interfaces\\I{tables[x].Name}.cs", GenerateInterfaceClassFile(interfaceMethods[x], projectName, tables[x].Name));
+                    //WriteFile(rootPath + $"Interfaces\\I{tables[x].Name}.cs", GenerateInterfaceClassFile(interfaceMethods[x], projectName, tables[x].Name));
 
                     // Write the Service class
-                    WriteFile(rootPath + $"Services\\{tables[x].Name}Service.cs", GenerateServiceClassFile(serviceMethods[x], projectName, tables[x].Name, new Dictionary<string, string>(), fromDBType, orm));
+                    //WriteFile(rootPath + $"Services\\{tables[x].Name}Service.cs", GenerateServiceClassFile(serviceMethods[x], projectName, tables[x].Name, new Dictionary<string, string>(), fromDBType, orm));
                     
                     // Write the Controller class
                     injections = new Dictionary<string, string>();
                     injections.Add($"I{tables[x].Name}Service", $"{tables[x].Name}Service");
-                    WriteFile(rootPath + $"Controllers\\{tables[x].Name}Controller.cs", GenerateControllerClassFile(controllerMethods[x], projectName, tables[x].Name, injections));
+                    //WriteFile(rootPath + $"Controllers\\{tables[x].Name}Controller.cs", GenerateControllerClassFile(controllerMethods[x], projectName, tables[x].Name, injections));
                 }
 
                 // Write Startup class
-                WriteFile(rootPath + $"Startup.cs", GenerateStartupClassFile(projectName, "", startupInjections, fromDBType));
+                //WriteFile(rootPath + $"Startup.cs", GenerateStartupClassFile(projectName, "", startupInjections, fromDBType));
+               
             }
 
             /*
@@ -694,7 +707,7 @@ namespace Codeterpret.Implementations
             }
             */
 
-            return true;
+            return ret;
 
 
         }
