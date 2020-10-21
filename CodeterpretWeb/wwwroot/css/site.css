@@ -150,6 +150,34 @@ app {
     top: 0.5rem;
 }
 
+
+.project-container {
+    display: flex;
+}
+
+.project-panel {
+    flex: 1;
+    border: 2px solid silver;
+}
+
+.project-panel:first-child {
+    margin-right: 20px;
+}
+
+.project-tree {
+    width: 25%;
+}
+
+.project-code {
+    width: 75%;
+}
+
+#backendCodePanel
+{
+    display: none;
+}
+
+
 @media (max-width: 767.98px) {
 
 

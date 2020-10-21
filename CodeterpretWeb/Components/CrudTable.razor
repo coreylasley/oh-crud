@@ -4,6 +4,8 @@
 @using Codeterpret.Common;
 @using System.Linq;
 
+@inject IJSRuntime JSRuntime
+
 
 @if (SQLTables != null && SQLTables.Count > 0)
 {
@@ -51,19 +53,37 @@
         </TableBody>
     </Table>
 
+    <Button Clicked="GenerateProject" Color="Color.Primary">Generate Project</Button>
+    <br />
+}
 
-    @if (Items != null)
-        {
-        <TreeView Nodes="Items"
-                  GetChildNodes="@(item => item.Items)"
-                  HasChildNodes="@(item => item.Items?.Any() == true)"
-                  @bind-SelectedNode="selectedNode"
-                  @bind-ExpandedNodes="ExpandedNodes">
-            <NodeContent>@context.Name</NodeContent>
-        </TreeView>
-        }
+<div id="backendCodePanel">
+    <div class="project-container">
 
-    }
+        <div class="project-panel project-tree">
+
+            @if (Items != null)
+            {
+                <TreeView Nodes="Items"
+                          TNode="ProjectItem"
+                          GetChildNodes="@(item => item.Items)"
+                          HasChildNodes="@(item => item.Items?.Any() == true)"
+                          SelectedNodeChanged="@SelectedNodeChanged">
+                    <NodeContent>@context.Name</NodeContent>
+                </TreeView>
+            }
+
+        </div>
+
+        <div class="project-panel project-code">
+            <Field>
+                <FieldLabel><b>@currentFile</b></FieldLabel>
+                <textarea rows="60" id="backendCode" name="backendCode" @bind="backendCode"></textarea>
+            </Field>
+        </div>
+
+    </div>
+</div>
 
 
 @code {
@@ -76,12 +96,36 @@
     IList<ProjectItem> ExpandedNodes = new List<ProjectItem>();
     ProjectItem selectedNode;
 
+    string backendCode;
+    string currentFile;
+    bool showProjectPanel = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeBackendCode();
+        }
+    }
+
     public void Refresh()
     {
         StateHasChanged();
     }
 
-    private void checkValueChanged(string tableName, Common.CRUDTypes crudType)
+    public async Task InitializeBackendCode()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<object>("CodeMirrorBackendCode", "");
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    private async Task checkValueChanged(string tableName, Common.CRUDTypes crudType)
     {
         foreach (var st in SQLTables.Where(x => x.Name == tableName))
         {
@@ -102,10 +146,27 @@
             }
         }
 
-        CSharp csharp = new CSharp();
-
-        Items = csharp.GenerateProject(SQLTables, Common.DatabaseTypes.SQLServer, "TestProject", "Dapper");
         StateHasChanged();
+    }
+
+    private async Task GenerateProject()
+    {
+        CSharp csharp = new CSharp();
+        Items = csharp.GenerateProject(SQLTables, Common.DatabaseTypes.SQLServer, "TestProject", "Dapper");
+        showProjectPanel = true;
+        StateHasChanged();
+
+        await JSRuntime.InvokeAsync<object>("ShowBackendCodePanel");
+        await JSRuntime.InvokeVoidAsync("SetBackendCode", "");
+
+        //await InitializeBackendCode();
+
+    }
+
+    private async Task SelectedNodeChanged(ProjectItem e)
+    {
+        currentFile = e.Name;
+        await JSRuntime.InvokeVoidAsync("SetBackendCode", e.Code);
     }
 
 
