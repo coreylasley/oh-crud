@@ -2,13 +2,10 @@
 @inject NavigationManager NavManager
 
 
-<h3><b>Welcome to Codeterpret!</b></h3>
-Currently in the early stages of development, Codeterpret is a web based tool which can be used to create/translate database schema creation scripts,
-generate back-end services/APIs and front-end applications, all from a database schema script. The end goal here is to help save developers from the
-monotony of having to write much of the code needed for the basic operations of a web app.
-<br />
-<br />
-If you would like to contribute to this effort, please take a look at the <a href="https://github.com/coreylasley/codeterpret">GitHub repo</a>.
+<h1><b>Codeterpret</b></h1>
+<p>Codeterpret is an open source web based tool that allows developers to create and translate database schemas, as well and generate corresponding back-end APIs and front-end code, in effort to help take the monotony out of setting up the foundation of a new application. The end goal is to produce output for many databases, back-end languages, and front-end frameworks, but for now, in phase one development, my focus is  <a href="https://www.microsoft.com/en-us/sql-server/sql-server-2019" target="_blank">SQL Server</a>/<a href="https://www.mysql.com/" target="_blank">MySQL</a>, <a href="https://docs.microsoft.com/en-us/dotnet/csharp/" target="_blank">C#</a> <a href="https://dotnet.microsoft.com/download" target="_blank">.NET Core</a> 3.1+, <a href="https://angular.io/" target="_blank">Angular</a> 10+</p>
+
+<p>The code behind this application is <a href="https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor" target="_blank">Blazor</a>, <a href="https://blazorise.com/" target="_blank">Blazorise</a>, <a href="https://codemirror.net/" target="_blank">CodeMirror</a></p>
 <br />
 <br />
 <div align="center">
@@ -18,9 +15,9 @@ If you would like to contribute to this effort, please take a look at the <a hre
 @code
 {
 
-public void GotoBuilder()
-{
-    NavManager.NavigateTo("builder");
-}
+    public void GotoBuilder()
+    {
+        NavManager.NavigateTo("builder");
+    }
 
 }

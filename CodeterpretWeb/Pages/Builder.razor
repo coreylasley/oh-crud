@@ -38,7 +38,7 @@
                     @if (fromDBType == 2)
                     {
                         <Heading Size="HeadingSize.Is4" TextColor="TextColor.Dark">
-                            Quick Script
+                            <h3>Quick Script</h3>
                             <CloseButton Clicked="@hideFromDBTypeInfo" />
                         </Heading>
                         <Paragraph>
@@ -53,7 +53,7 @@
                     @if (fromDBType == 0)
                     {
                         <Heading Size="HeadingSize.Is4" TextColor="TextColor.Dark">
-                            SQL Server
+                            <h3>SQL Server</h3>
                             <CloseButton Clicked="@hideFromDBTypeInfo" />
                         </Heading>
                         <Paragraph>
@@ -67,8 +67,8 @@
                     @if (fromDBType == 1)
                     {
                         <Heading Size="HeadingSize.Is4" TextColor="TextColor.Dark">
-                            MySQL
-                            <CloseButton Clicked="@hideFromDBTypeInfo" />
+                            <h3>MySQL</h3>
+                                <CloseButton Clicked="@hideFromDBTypeInfo" />
                         </Heading>
                         <Paragraph>
                             For best results, it is best to use schema creation script that has been generated from a tool such as MySQL Workbench.
@@ -98,7 +98,7 @@
                         </Select>
                     </Field>
                     <Field>
-                        <Button Color="Color.Primary" Clicked="@Generate">Generate</Button>
+                        <Button Color="Color.Secondary" Clicked="@Generate">Generate</Button>
                     </Field>
                 </Fields>
 

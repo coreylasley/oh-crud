@@ -1,17 +1,14 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="sidebar">
-    <NavMenu />
+<NavMenu />
+
+<div class="body">
+    @Body
 </div>
 
-<div class="main">
-    <!--
-    <div class="top-row px-4">
-
-    </div>
-    -->
-
-    <div class="content px-4">
-        @Body
-    </div>
+<br /><br /><br />
+<div class="footer">
+    <a href="/">Home</a> |
+    <a href="privacy">Privacy Policy</a><br>
+    © 2020 <a href="https://www.coreylasley.com">Corey Lasley</a>
 </div>
