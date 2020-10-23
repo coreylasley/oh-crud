@@ -195,6 +195,35 @@ namespace Codeterpret.Implementations
             return ret;
         }
 
+
+        /// <summary>
+        /// Generates a comment block for a method
+        /// </summary>
+        /// <param name="summary"></param>
+        /// <param name="paramNames"></param>
+        /// <param name="returns"></param>
+        /// <returns></returns>
+        private string metaComment(string summary, List<string> paramNames, string returns)
+        {
+            string ret = $"\t\t/// <summary>\n\t\t/// {summary}\n\t\t/// </summary>\n";
+            foreach(string pn in paramNames)
+            {
+                ret += $"\t\t/// <param name=\"{pn}\"></param>\n";
+            }
+            ret += $"\t\t/// <returns>{returns}</returns>\n";
+
+            return ret;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tables"></param>
+        /// <param name="fromDBType"></param>
+        /// <param name="ORM"></param>
+        /// <param name="groupByTable"></param>
+        /// <param name="AsInterface"></param>
+        /// <returns></returns>
         public override List<string> GenerateServiceMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string ORM, bool groupByTable = false, bool AsInterface = false)
         {
             List<string> methods = new List<string>();
@@ -202,19 +231,20 @@ namespace Codeterpret.Implementations
             {
                 if (!groupByTable)
                 {
-                    methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Create, ORM, AsInterface));
-                    methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Read, ORM, AsInterface));
-                    methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Update, ORM, AsInterface));
-                    methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Delete, ORM, AsInterface));
+                    if (t.GenerateCreate) methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Create, ORM, AsInterface));
+                    if (t.GenerateRead) methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Read, ORM, AsInterface));
+                    if (t.GenerateUpdate) methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Update, ORM, AsInterface));
+                    if (t.GenerateDelete) methods.Add(GenerateServiceMethod(t, fromDBType, CRUDTypes.Delete, ORM, AsInterface));
                 }
                 else
                 {
-                    string code = GenerateServiceMethod(t, fromDBType, CRUDTypes.Create, ORM, AsInterface) + "\n\n" +
-                        GenerateServiceMethod(t, fromDBType, CRUDTypes.Read, ORM, AsInterface) + "\n\n" +
-                        GenerateServiceMethod(t, fromDBType, CRUDTypes.Update, ORM, AsInterface) + "\n\n" +
-                        GenerateServiceMethod(t, fromDBType, CRUDTypes.Delete, ORM, AsInterface);
+                    string code = "";
+                    if (t.GenerateCreate) code += GenerateServiceMethod(t, fromDBType, CRUDTypes.Create, ORM, AsInterface) + "\n\n";
+                    if (t.GenerateRead) code += GenerateServiceMethod(t, fromDBType, CRUDTypes.Read, ORM, AsInterface) + "\n\n";
+                    if (t.GenerateUpdate) code += GenerateServiceMethod(t, fromDBType, CRUDTypes.Update, ORM, AsInterface) + "\n\n";
+                    if (t.GenerateDelete) code += GenerateServiceMethod(t, fromDBType, CRUDTypes.Delete, ORM, AsInterface);
 
-                    methods.Add(code);
+                    methods.Add(code.Trim());
                 }
             }
             return methods;           
@@ -233,19 +263,21 @@ namespace Codeterpret.Implementations
 
                 if (!groupByTable)
                 {
-                    methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn));
-                    methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn));
-                    methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn));
-                    methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn));
+                    if (t.GenerateCreate) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn));
+                    if (t.GenerateRead) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn));
+                    if (t.GenerateUpdate) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn));
+                    if (t.GenerateDelete) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn));
                 }
                 else
                 {
-                    string code = GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn) + "\n\n" +
-                        GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn) + "\n\n" +
-                        GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn) + "\n\n" +
-                        GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn);
+                    string code = "";
 
-                    methods.Add(code);
+                    if (t.GenerateCreate) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn) + "\n\n";
+                    if (t.GenerateRead) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn) + "\n\n";
+                    if (t.GenerateUpdate) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn) + "\n\n";
+                    if (t.GenerateDelete) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn); 
+
+                    methods.Add(code.Trim());
                 }
             }
             return methods;
@@ -273,6 +305,9 @@ namespace Codeterpret.Implementations
             string methodEnd = !asInterface ? "" : ";";
             string returnType = "";
 
+            List<string> paramNamesA = new List<string>();
+            List<string> paramNamesB = new List<string>();
+
             // Get the primary key colums to be used in method names, and parameters
             foreach (var c in table.SQLColumns)
             {
@@ -290,31 +325,33 @@ namespace Codeterpret.Implementations
 
                     by += c.Name;
                     byParams += $"{c.CSharpType(fromDBType)} {c.Name}";
+                    paramNamesA.Add(c.Name);
                 }
                 else
                 {
                     if (Params != "") Params += ", ";
 
                     Params += $"{c.CSharpType(fromDBType)} {c.Name}";
+                    paramNamesB.Add(c.Name);
                 }
             }
 
             switch (crudType)
             {
                 case CRUDTypes.Create:
-                    methodName = $"\t{accessible} Task<{table.Name}> Add{table.Name}({Params}){methodEnd}";
+                    methodName = $"{(asInterface ? metaComment("Adds a " + table.Name + " record", paramNamesB, table.Name) : "")}\t\t{accessible} Task<{table.Name}> Add{table.Name}({Params}){methodEnd}";
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Read:
-                    methodName = $"\t{accessible} Task<{table.Name}> Get{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = $"{(asInterface ? metaComment("Gets a " + table.Name + " record", paramNamesA, table.Name) : "")}\t\t{accessible} Task<{table.Name}> Get{table.Name}{by}({byParams}){methodEnd}";
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Update:
-                    methodName = $"\t{accessible} Task<bool> Update{table.Name}({table.Name} entity){methodEnd}";
+                    methodName = $"{(asInterface ? metaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}\t\t{accessible} Task<bool> Update{table.Name}({table.Name} entity){methodEnd}";
                     returnType = "bool";
                     break;
                 case CRUDTypes.Delete:
-                    methodName = $"\t{accessible} Task<bool> Delete{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = $"{(asInterface ? metaComment("Deletes a " + table.Name + " record", paramNamesA, "bool representing success") : "")}\t\t{accessible} Task<bool> Delete{table.Name}{by}({byParams}){methodEnd}";
                     returnType = "bool";
                     break;
             }
@@ -327,10 +364,10 @@ namespace Codeterpret.Implementations
             switch (ORM.Trim().ToLower())
             {
                 case "dapper":
-                    method = $"{methodName}\n\t{{\n\t\t{returnType} entity = {(returnType == "bool" ? "false" : "null" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\treturn entity;\n\t}}";
+                    method = $"{methodName}\n\t\t{{\n\t\t\t{returnType} entity = {(returnType == "bool" ? "false" : "null" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\treturn entity;\n\t\t}}";
                     break;
                 case "ado":
-                    method = $"{methodName}\n\t{{\n{GenerateADOMethodBody(table, fromDBType, crudType)}\n}}";
+                    method = $"{methodName}\n\t\t{{\n{GenerateADOMethodBody(table, fromDBType, crudType)}\n}}";
                     break;
             }
 
@@ -455,7 +492,7 @@ namespace Codeterpret.Implementations
         private string GenerateDapperMethodBody(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType)
         {
             string con = GetConnectionType(fromDBType);
-            string body = $"\t\tusing ({con} conn = new {con}(_connectionString))\n\t\t{{\n\t\t\t";
+            string body = $"\t\t\tusing ({con} conn = new {con}(_connectionString))\n\t\t\t{{\n\t\t\t\t";
 
             List<string> columns = new List<string>();
             List<string> variables = new List<string>();
@@ -538,7 +575,7 @@ namespace Codeterpret.Implementations
                     break;
             }
 
-            body += $"{sql}\n\t\t\tconn.Open();\n\t\t\t{execute}\n\t\t\tconn.Close();\n\t\t}}";            
+            body += $"{sql}\n\t\t\t\tconn.Open();\n\t\t\t\t{execute}\n\t\t\t}}";            
             
             return body;
         }

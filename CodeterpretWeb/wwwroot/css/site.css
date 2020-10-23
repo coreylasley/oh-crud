@@ -8,6 +8,12 @@ h1, h2, h3 {
     font-family: 'Teko', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+.file-label {
+    font-family: 'Teko', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    padding: 5px;
+    font-size: 20px;
+}
+
 a, .btn-link {
     color: #0366d6;
 }
