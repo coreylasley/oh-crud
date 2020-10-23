@@ -21,7 +21,11 @@ namespace Codeterpret.Implementations
             ORMs = "dapper,ado";
         }
 
-       
+        private string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\r\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn InternalServerError();\r\t\t}";
+        private string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\r\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\r\t\t\t}";
+        private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode(HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\r\t\t\t}";
+
+
         public override List<SQLTable> GenerateSQLTables(string code, bool addIDColumnIfMissing = true)
         {
             List<SQLTable> ret = new List<SQLTable>();
@@ -422,32 +426,42 @@ namespace Codeterpret.Implementations
             }
 
             string methodNameCall = "";
+            string condition = "";
+            string callToService = "";
 
             switch (crudType)
             {
                 case CRUDTypes.Create:
-                    methodName = $"[HttpPost(\"Add{table.Name}/{Route}\")]\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
+                    methodName = $"[HttpPost(\"{table.Name}/{Route}\")]\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
                     methodNameCall = $"Add{table.Name}";
                     call = ParamsCall;
+                    method = $"\t{methodName}\n\t{{\n\t\tvar ret = await {serviceName}.{methodNameCall}({call});\n\t\treturn Ok(ret);\n\t}}";
                     break;
                 case CRUDTypes.Read:
-                    methodName = $"[HttpGet(\"Get{table.Name}{by}/{byRoute}\")]\n\t{accessible} Get{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = $"[HttpGet(\"{table.Name}/{byRoute}\")]\n\t{accessible} Get{table.Name}{by}({byParams}){methodEnd}";
                     methodNameCall = $"Read{table.Name}{by}";
                     call = byParamsCall;
+                    callToService = $"var ret = await {serviceName}.{methodNameCall}({call})";
+                    condition = $"ret != null";
+                    method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerOkOrBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Found")).Replace("<RETURN>", "ret").Replace("<CALL>", callToService)}\n\t}}";
                     break;
                 case CRUDTypes.Update:
-                    methodName = $"[HttpPut(\"Update{table.Name}/{Route}\")]\n\t{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
+                    methodName = $"[HttpPut(\"{table.Name}/{Route}\")]\n\t{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
                     methodNameCall = $"Update{table.Name}";
                     call = ParamsCall;
+                    condition = $"await {serviceName}.{methodNameCall}({call})";
+                    method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Updated"))}\n\t}}";
                     break;
                 case CRUDTypes.Delete:
-                    methodName = $"[HttpDelete(\"Delete{table.Name}/{byRoute}\")]\n\t{accessible} Delete{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = $"[HttpDelete(\"{table.Name}/{byRoute}\")]\n\t{accessible} Delete{table.Name}{by}({byParams}){methodEnd}";
                     methodNameCall = $"Delete{table.Name}{by}";
                     call = byParamsCall;
+                    condition = $"await {serviceName}.{methodNameCall}({call})";
+                    method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Deleted"))}\n\t}}";
                     break;
             }
 
-            method = $"\t{methodName}\n\t{{\n\t\tvar ret = await {serviceName}.{methodNameCall}({call});\n\t\treturn Ok(ret);\n\t}}";
+           
 
             return method;
         }
