@@ -1,5 +1,5 @@
 ﻿@using Codeterpret
-@using Codeterpret.Implementations;
+@using Codeterpret.Implementations.BackEnd;
 @using Codeterpret.SQL;
 @using Codeterpret.Common;
 @using System.Linq;
@@ -16,16 +16,19 @@
     </Field>
     <Field>
         <FieldLabel><b>Backend Project Type</b></FieldLabel>
-        <Select TValue="Common.BackEndProjectTypes" @bind-SelectedValue="@BackEndProjectType">
-            <SelectItem Value="Common.BackEndProjectTypes.CSharpNETCore31Dapper">C# .NET Core 3.1 Web API with Dapper</SelectItem>
+        <Select TValue="Enums.BackEndProjectTypes" @bind-SelectedValue="@BackEndProjectType">
+            @foreach (EnumDetail ed in backendProjectTypes)
+            {
+                <SelectItem Value="@ed.Value">@ed.Description</SelectItem>
+            }
         </Select>
     </Field>
     <Field>
         <FieldLabel><b>Service Class Organization</b></FieldLabel>
-        <Select TValue="Common.ServiceOrganizationTypes" @bind-SelectedValue="@ServiceOrganizationType">
-            <SelectItem Value="Common.ServiceOrganizationTypes.AllSameClass">Everything in same Class</SelectItem>
-            <SelectItem Value="Common.ServiceOrganizationTypes.AllSameClass">In Class by Table (i.e. @(SQLTables[0].Name + "Service"))</SelectItem>
-            <SelectItem Value="Common.ServiceOrganizationTypes.AllSameClass">In Class by CRUD Operation (i.e. CreateService)</SelectItem>
+        <Select TValue="Enums.ServiceOrganizationTypes" @bind-SelectedValue="@ServiceOrganizationType">
+            <SelectItem Value="Enums.ServiceOrganizationTypes.AllSameClass">Everything in same Class</SelectItem>
+            <SelectItem Value="Enums.ServiceOrganizationTypes.AllSameClass">In Class by Table (i.e. @(SQLTables[0].Name + "Service"))</SelectItem>
+            <SelectItem Value="Enums.ServiceOrganizationTypes.AllSameClass">In Class by CRUD Operation (i.e. CreateService)</SelectItem>
         </Select>
     </Field>
 </Fields>
@@ -47,10 +50,10 @@
             {
                 <TableRow>
                     <TableRowHeader>@t.Name</TableRowHeader>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Create))"></Check></TableRowCell>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Read))"></Check></TableRowCell>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Update))"></Check></TableRowCell>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Common.CRUDTypes.Delete))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Create))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Read))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Update))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Delete))"></Check></TableRowCell>
                     <TableRowCell><TextEdit Placeholder="@("i.e. " + t.Name + "Service")"></TextEdit></TableRowCell>
                 </TableRow>
             }
@@ -94,8 +97,11 @@
 
     public List<SQLTable> SQLTables { get; set; }
     public string BackEndProjectName = "Test Project";
-    public Common.BackEndProjectTypes BackEndProjectType;
-    public Common.ServiceOrganizationTypes ServiceOrganizationType;
+    public Enums.BackEndProjectTypes BackEndProjectType;
+    public Enums.ServiceOrganizationTypes ServiceOrganizationType;
+
+    List<EnumDetail> backendProjectTypes = new List<EnumDetail>();
+    List<EnumDetail> frontendProjectTypes = new List<EnumDetail>();
 
     private IEnumerable<ProjectItem> Items;
     IList<ProjectItem> ExpandedNodes = new List<ProjectItem>();
@@ -104,6 +110,12 @@
     string backendCode;
     string currentFile;
     bool showProjectPanel = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        backendProjectTypes = Enums.GetBackEndProjectTypes();
+        frontendProjectTypes = Enums.GetFrontEndProjectTypes();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -130,22 +142,22 @@
         }
     }
 
-    private async Task checkValueChanged(string tableName, Common.CRUDTypes crudType)
+    private async Task checkValueChanged(string tableName, Enums.CRUDTypes crudType)
     {
         foreach (var st in SQLTables.Where(x => x.Name == tableName))
         {
             switch (crudType)
             {
-                case Common.CRUDTypes.Create:
+                case Enums.CRUDTypes.Create:
                     st.GenerateCreate = !st.GenerateCreate;
                     break;
-                case Common.CRUDTypes.Read:
+                case Enums.CRUDTypes.Read:
                     st.GenerateRead = !st.GenerateRead;
                     break;
-                case Common.CRUDTypes.Update:
+                case Enums.CRUDTypes.Update:
                     st.GenerateUpdate = !st.GenerateUpdate;
                     break;
-                case Common.CRUDTypes.Delete:
+                case Enums.CRUDTypes.Delete:
                     st.GenerateDelete = !st.GenerateDelete;
                     break;
             }
@@ -157,7 +169,7 @@
     private async Task GenerateProject()
     {
         CSharp csharp = new CSharp();
-        Items = csharp.GenerateProject(SQLTables, Common.DatabaseTypes.SQLServer, BackEndProjectName.Replace(" ", ""), "Dapper");
+        Items = csharp.GenerateProject(SQLTables, Enums.DatabaseTypes.SQLServer, BackEndProjectName.Replace(" ", ""), "Dapper");
         showProjectPanel = true;
         StateHasChanged();
 

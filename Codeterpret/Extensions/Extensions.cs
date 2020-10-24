@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -229,6 +231,41 @@ namespace Codeterpret
 
             return ret;
         }
+
+        public static string ToLocalVariable(this string name)
+        {
+            if (name == "ID") name = "Id";
+
+            string ret = name;
+
+            if (name.Length > 0)
+            {
+                name = ret.Substring(0, 1).ToLower() + ret.Substring(1, ret.Length - 1);
+                if (name != ret)
+                    ret = name;
+                else
+                    ret = "_" + ret;
+            }
+
+            return ret;
+        }
+
+        public static string GetDescription(this Enum GenericEnum)
+        {
+            // Thanks to: https://www.codingame.com/playgrounds/2487/c---how-to-display-friendly-names-for-enumerations
+            Type genericEnumType = GenericEnum.GetType();
+            MemberInfo[] memberInfo = genericEnumType.GetMember(GenericEnum.ToString());
+            if ((memberInfo != null && memberInfo.Length > 0))
+            {
+                var _Attribs = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+                if ((_Attribs != null && _Attribs.Count() > 0))
+                {
+                    return ((DescriptionAttribute)_Attribs.ElementAt(0)).Description;
+                }
+            }
+            return GenericEnum.ToString();
+        }
+
 
 
 

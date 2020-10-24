@@ -1,9 +1,9 @@
 ﻿using System.Linq;
-using static Codeterpret.Common.Common;
+using static Codeterpret.Common.Enums;
 
 namespace Codeterpret.SQL
 {
-    public class SQLColumn : Common.Common
+    public class SQLColumn : Common.Enums
     {
         public string Name { get; set; }
         public string SQLType { get; set; }

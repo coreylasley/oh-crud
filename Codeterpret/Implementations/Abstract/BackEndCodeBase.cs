@@ -6,28 +6,18 @@ using System.Threading.Tasks;
 using Codeterpret.Common;
 using Codeterpret.Interfaces;
 using Codeterpret.SQL;
-using static Codeterpret.Common.Common;
+using static Codeterpret.Common.Enums;
 
-namespace Codeterpret.Implementations
+namespace Codeterpret.Implementations.Abstract
 {
-    public abstract class CodeBase : ICode
+    public abstract class BackEndCodeBase : IBackEndCode
     {
-        /// <summary>
-        /// Comma delimited string of substrings that help to determine if a line of code would not be a Property definition
-        /// </summary>
+        
         public string PropertyDefinitionsShouldNotContain { get; set; }
 
-        /// <summary>
-        /// Comma delimited string of ORM names that are supported in code generation
-        /// </summary>
         public string ORMs { get; set; }
 
-        /// <summary>
-        /// Generates a SQL Script from a block of Code. NOTE: GenerateSQLTables() must be implemented.
-        /// </summary>
-        /// <param name="Code">Can be the contents of an entire code file</param>
-        /// <param name="dbType">The type of SQL script to be generated</param>
-        /// <returns></returns>
+
         public string GenerateSQLScript(string Code, DatabaseTypes dbType)
         {
             List<SQLTable> sts = GenerateSQLTables(Code);
@@ -35,12 +25,7 @@ namespace Codeterpret.Implementations
             return GenerateSQLScript(sts, dbType);
         }
 
-        /// <summary>
-        /// Generates a SQL Script from a List of SQLTable Objects
-        /// </summary>
-        /// <param name="sqlTableList">List of SQLTable Objects</param>
-        /// <param name="dbType">The type of SQL script to be generated</param>
-        /// <returns></returns>
+
         public string GenerateSQLScript(List<SQLTable> sqlTableList, DatabaseTypes dbType)
         {
             StringBuilder sb = new StringBuilder();

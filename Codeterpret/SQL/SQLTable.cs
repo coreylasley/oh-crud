@@ -10,7 +10,7 @@ namespace Codeterpret.SQL
     /// <summary>
     /// Parses and stores a Table structure from a SQL create script block. Also used to generate a language specific Model Class
     /// </summary>
-    public class SQLTable : Common.Common
+    public class SQLTable : Common.Enums
     {
         public string Name { get; set; }
         public string Schema { get; set; }

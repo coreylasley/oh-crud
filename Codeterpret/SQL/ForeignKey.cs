@@ -2,7 +2,7 @@
 
 namespace Codeterpret.SQL
 {
-    public class ForeignKey : Common.Common
+    public class ForeignKey : Common.Enums
     {
         public string Table1 { get; set; }
         public string Table2 { get; set; }

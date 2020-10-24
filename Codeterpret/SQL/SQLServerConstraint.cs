@@ -1,8 +1,8 @@
-﻿using static Codeterpret.Common.Common;
+﻿using static Codeterpret.Common.Enums;
 
 namespace Codeterpret.SQL
 {
-    public class SQLServerConstraint : Common.Common
+    public class SQLServerConstraint : Common.Enums
     {      
 
         public string ConstraintName { get; set; }

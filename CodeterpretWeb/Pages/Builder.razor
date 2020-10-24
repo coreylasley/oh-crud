@@ -1,5 +1,5 @@
 ﻿@using Codeterpret
-@using Codeterpret.Implementations;
+@using Codeterpret.Implementations.BackEnd;
 @using Codeterpret.SQL;
 @using Codeterpret.Common;
 @using CodeterpretWeb.Components;
@@ -148,6 +148,8 @@
     Alert translateFailed;
     CrudTable crudTable;
 
+
+
     private int fromDBType = 2;
     private int toDBType = 1;
     private string generatedSQL;
@@ -183,7 +185,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-
+        
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -236,8 +238,8 @@
                 await JSRuntime.InvokeAsync<object>("CodeMirrorToSql", "");
             }
 
-            Common.DatabaseTypes dbType = Common.DatabaseTypes.SQLServer;
-            if (toDBType == 2) dbType = Common.DatabaseTypes.MySQL;
+            Enums.DatabaseTypes dbType = Enums.DatabaseTypes.SQLServer;
+            if (toDBType == 2) dbType = Enums.DatabaseTypes.MySQL;
 
             generatedSQL = cs.GenerateSQLScript(stcb.SQLTables, dbType);
 
@@ -285,7 +287,7 @@
         SQLTableClassBuilder stcb = new SQLTableClassBuilder(exampleQuickScript);
         CSharp cs = new CSharp();
 
-        fromScript = dbTypeToShow == 2 ? exampleQuickScript : cs.GenerateSQLScript(stcb.SQLTables, (Common.DatabaseTypes)dbTypeToShow);
+        fromScript = dbTypeToShow == 2 ? exampleQuickScript : cs.GenerateSQLScript(stcb.SQLTables, (Enums.DatabaseTypes)dbTypeToShow);
         await SetFromSqlCode(fromScript);
     }
 

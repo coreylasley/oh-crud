@@ -2,13 +2,14 @@
 using System.Text;
 using System.Linq;
 using System.IO;
+using Codeterpret;
 
 namespace Codeterpret.SQL
 {
     /// <summary>
     /// Parses a database generated table creation script and generates language specific model classes representing the tables
     /// </summary>
-    public class SQLTableClassBuilder : Common.Common
+    public class SQLTableClassBuilder : Common.Enums
     {
 
         public List<SQLTable> SQLTables { get; set; }
@@ -32,7 +33,7 @@ namespace Codeterpret.SQL
             }
             else
             {
-                DatabaseType = DatabaseTypes.NaturalLanguage;
+                DatabaseType = DatabaseTypes.QuickScript;
                 ParseNaturalDescription(SQL);
             }
         }
@@ -125,7 +126,7 @@ namespace Codeterpret.SQL
                 foreach (SQLTable st in SQLTables.Where(x => x.Name == fk.Table1))
                 {
                     // Add the ForeignKey as a SQLColumn 
-                    st.SQLColumns.Add(new SQLColumn { Name = localVariable(fk.Table2), ForeignKeyType = fk.Table2, ForeignKey = fk, Comment = fk.ConstraintName });
+                    st.SQLColumns.Add(new SQLColumn { Name = fk.Table2.ToLocalVariable(), ForeignKeyType = fk.Table2, ForeignKey = fk, Comment = fk.ConstraintName });
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Codeterpret.Implementations.Abstract;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Codeterpret.Implementations
 {
-    public class TypeScript : CodeBase
+    public class TypeScript : FrontEndCodeBase
     {
     }
 }

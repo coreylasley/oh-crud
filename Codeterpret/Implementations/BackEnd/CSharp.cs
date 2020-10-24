@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using System.IO;
 using Codeterpret.SQL;
 using System.IO.Compression;
-using static Codeterpret.Common.Common;
+using static Codeterpret.Common.Enums;
 using Codeterpret.Common;
+using Codeterpret.Implementations.Abstract;
 
-namespace Codeterpret.Implementations
+namespace Codeterpret.Implementations.BackEnd
 {
 
-    public class CSharp : CodeBase
+    public class CSharp : BackEndCodeBase
     {
        
         public CSharp()
@@ -21,10 +22,130 @@ namespace Codeterpret.Implementations
             ORMs = "dapper,ado";
         }
 
-        private string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\r\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn InternalServerError();\r\t\t}";
-        private string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\r\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\r\t\t\t}";
-        private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode(HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\r\t\t\t}";
+        private string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn InternalServerError();\n\t\t}";
+        private string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
+        private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode(HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
 
+        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false)
+        {
+            List<ProjectItem> ret = new List<ProjectItem>();
+            ret.Add(new ProjectItem { Name = projectName, ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+
+            List<string> interfaceMethods = new List<string>();
+            List<string> serviceMethods = new List<string>();
+            List<string> controllerMethods = new List<string>();
+            List<string> models = new List<string>();
+            string code = "";
+
+            // If all the table code exists in a single Service and a single Controller....
+            if (!seperateFilesPerTable)
+            {
+                interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", false, true);
+                serviceMethods = GenerateServiceMethods(tables, fromDBType, "dapper", false, false);
+                controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", false);
+                models = GenerateModels(tables, fromDBType);
+
+                // --- INTERFACES -----------------
+                foreach (string s in interfaceMethods)
+                {
+                    code += s + "\n\n";
+                }
+                //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
+                ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[0].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+
+                // --- SERVICES --------------------
+                code = "";
+                foreach (string s in serviceMethods)
+                {
+                    code += s + "\n\n";
+                }
+
+                ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[1].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+
+
+                // --- CONTROLLERS ----------------
+                code = "";
+                foreach (string s in controllerMethods)
+                {
+                    code += s + "\n\n";
+                }
+
+                ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[2].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
+
+                // --- MODELS ---------------------
+                ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                for (int x = 0; x < models.Count; x++)
+                {
+                    if (tables[x].IncludeThisTable)
+                        ret[0].Items[3].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = models[x] });
+                }
+
+                // --- MISC PROJECT FILES ---------------
+                ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = "" });
+
+            }
+            else // If we want each table represented in its own Service and Controller
+            {
+                interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", true, true);
+                serviceMethods = GenerateServiceMethods(tables, fromDBType, orm, true, false);
+                controllerMethods = GenerateControllerMethods(tables, fromDBType, "", true);
+
+                Dictionary<string, string> injections = new Dictionary<string, string>();
+                Dictionary<string, string> startupInjections = new Dictionary<string, string>();
+
+                for (int x = 0; x < tables.Count; x++)
+                {
+                    startupInjections.Add($"I{tables[x].Name}Service", $"{tables[x].Name}Service");
+
+                    // Write the Interface class
+                    //WriteFile(rootPath + $"Interfaces\\I{tables[x].Name}.cs", GenerateInterfaceClassFile(interfaceMethods[x], projectName, tables[x].Name));
+
+                    // Write the Service class
+                    //WriteFile(rootPath + $"Services\\{tables[x].Name}Service.cs", GenerateServiceClassFile(serviceMethods[x], projectName, tables[x].Name, new Dictionary<string, string>(), fromDBType, orm));
+
+                    // Write the Controller class
+                    injections = new Dictionary<string, string>();
+                    injections.Add($"I{tables[x].Name}Service", $"{tables[x].Name}Service");
+                    //WriteFile(rootPath + $"Controllers\\{tables[x].Name}Controller.cs", GenerateControllerClassFile(controllerMethods[x], projectName, tables[x].Name, injections));
+                }
+
+                // Write Startup class
+                //WriteFile(rootPath + $"Startup.cs", GenerateStartupClassFile(projectName, "", startupInjections, fromDBType));
+
+            }
+
+            /*
+            using (var memoryStream = new MemoryStream())
+            {
+                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                {
+                    var demoFile = archive.CreateEntry("foo.txt");
+
+                    using (var entryStream = demoFile.Open())
+                    using (var streamWriter = new StreamWriter(entryStream))
+                    {
+                        streamWriter.Write("Bar!");
+                    }
+                }
+
+                using (var fileStream = new FileStream(@"C:\Temp\test.zip", FileMode.Create))
+                {
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    memoryStream.CopyTo(fileStream);
+                }
+            }
+            */
+
+            return ret;
+
+        }
 
         public override List<SQLTable> GenerateSQLTables(string code, bool addIDColumnIfMissing = true)
         {
@@ -201,25 +322,6 @@ namespace Codeterpret.Implementations
 
 
         /// <summary>
-        /// Generates a comment block for a method
-        /// </summary>
-        /// <param name="summary"></param>
-        /// <param name="paramNames"></param>
-        /// <param name="returns"></param>
-        /// <returns></returns>
-        private string metaComment(string summary, List<string> paramNames, string returns)
-        {
-            string ret = $"\t\t/// <summary>\n\t\t/// {summary}\n\t\t/// </summary>\n";
-            foreach(string pn in paramNames)
-            {
-                ret += $"\t\t/// <param name=\"{pn}\"></param>\n";
-            }
-            ret += $"\t\t/// <returns>{returns}</returns>\n";
-
-            return ret;
-        }
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="tables"></param>
@@ -296,6 +398,29 @@ namespace Codeterpret.Implementations
             }
             return models;
         }
+
+
+
+
+        /// <summary>
+        /// Generates a comment block for a method
+        /// </summary>
+        /// <param name="summary"></param>
+        /// <param name="paramNames"></param>
+        /// <param name="returns"></param>
+        /// <returns></returns>
+        private string metaComment(string summary, List<string> paramNames, string returns)
+        {
+            string ret = $"\t\t/// <summary>\n\t\t/// {summary}\n\t\t/// </summary>\n";
+            foreach (string pn in paramNames)
+            {
+                ret += $"\t\t/// <param name=\"{pn}\"></param>\n";
+            }
+            ret += $"\t\t/// <returns>{returns}</returns>\n";
+
+            return ret;
+        }
+
 
         private string GenerateServiceMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string ORM, bool asInterface = false)
         {
@@ -653,136 +778,12 @@ namespace Codeterpret.Implementations
 
         private string GenerateControllerClass(string projectName, string controllerName, string route, string code)
         {
-            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Linq;\nusing System.Threading.Tasks;nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\n\nnamespace {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    public class {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
+            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Linq;\nusing System.Threading.Tasks;\nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\n\nnamespace {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    public class {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
 
             return ret;
         }
 
-        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false)
-        {
-            List<ProjectItem> ret = new List<ProjectItem>();
-            ret.Add(new ProjectItem { Name = projectName, ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() } );
 
-            List<string> interfaceMethods = new List<string>();
-            List<string> serviceMethods = new List<string>();
-            List<string> controllerMethods = new List<string>();
-            List<string> models = new List<string>();
-            string code = "";
-
-            /*
-            CreateDir(rootPath);
-            CreateDir(rootPath + "Interfaces");
-            CreateDir(rootPath + "Services");
-            CreateDir(rootPath + "Controllers");
-            CreateDir(rootPath + "Models");
-            
-            if (!rootPath.EndsWith("\\")) rootPath += "\\";
-            rootPath += projectName + (!projectName.EndsWith("\\") ? "\\" : "");
-            */
-
-            // If all the table code exists in a single Service and a single Controller....
-            if (!seperateFilesPerTable)
-            {
-                interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", false, true);
-                serviceMethods = GenerateServiceMethods(tables, fromDBType, "dapper", false, false);
-                controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", false);
-                models = GenerateModels(tables, fromDBType);
-
-                // --- INTERFACES -----------------
-                foreach (string s in interfaceMethods)
-                {
-                    code += s + "\n\n";
-                }
-                //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
-                ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[0].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
-
-                // --- SERVICES --------------------
-                code = "";
-                foreach (string s in serviceMethods)
-                {
-                    code += s + "\n\n";
-                }
-                
-                ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[1].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
-
-
-                // --- CONTROLLERS ----------------
-                code = "";
-                foreach (string s in controllerMethods)
-                {
-                    code += s + "\n\n";
-                }
-                
-                ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[2].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
-
-                // --- MODELS ---------------------
-                ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                for(int x = 0; x < models.Count; x++)
-                {
-                    if (tables[x].IncludeThisTable)
-                      ret[0].Items[3].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = models[x]});
-                }
-
-            }
-            else // If we want each table represented in its own Service and Controller
-            {
-                interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", true, true);
-                serviceMethods = GenerateServiceMethods(tables, fromDBType, orm, true, false);
-                controllerMethods = GenerateControllerMethods(tables, fromDBType, "", true);
-
-                Dictionary<string, string> injections = new Dictionary<string, string>();
-                Dictionary<string, string> startupInjections = new Dictionary<string, string>();                                
-
-                for (int x = 0; x < tables.Count; x++)
-                {
-                    startupInjections.Add($"I{tables[x].Name}Service", $"{tables[x].Name}Service");
-
-                    // Write the Interface class
-                    //WriteFile(rootPath + $"Interfaces\\I{tables[x].Name}.cs", GenerateInterfaceClassFile(interfaceMethods[x], projectName, tables[x].Name));
-
-                    // Write the Service class
-                    //WriteFile(rootPath + $"Services\\{tables[x].Name}Service.cs", GenerateServiceClassFile(serviceMethods[x], projectName, tables[x].Name, new Dictionary<string, string>(), fromDBType, orm));
-                    
-                    // Write the Controller class
-                    injections = new Dictionary<string, string>();
-                    injections.Add($"I{tables[x].Name}Service", $"{tables[x].Name}Service");
-                    //WriteFile(rootPath + $"Controllers\\{tables[x].Name}Controller.cs", GenerateControllerClassFile(controllerMethods[x], projectName, tables[x].Name, injections));
-                }
-
-                // Write Startup class
-                //WriteFile(rootPath + $"Startup.cs", GenerateStartupClassFile(projectName, "", startupInjections, fromDBType));
-               
-            }
-
-            /*
-            using (var memoryStream = new MemoryStream())
-            {
-                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
-                {
-                    var demoFile = archive.CreateEntry("foo.txt");
-
-                    using (var entryStream = demoFile.Open())
-                    using (var streamWriter = new StreamWriter(entryStream))
-                    {
-                        streamWriter.Write("Bar!");
-                    }
-                }
-
-                using (var fileStream = new FileStream(@"C:\Temp\test.zip", FileMode.Create))
-                {
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    memoryStream.CopyTo(fileStream);
-                }
-            }
-            */
-
-            return ret;
-
-
-        }
 
         private string GenerateStartupClassFile(string baseNamespace, string className, Dictionary<string, string> injectServices, DatabaseTypes fromDBType)
         {
