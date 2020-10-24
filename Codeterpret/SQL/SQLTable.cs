@@ -22,6 +22,15 @@ namespace Codeterpret.SQL
         public bool GenerateUpdate { get; set; }
         public bool GenerateDelete { get; set; }
 
+        public bool IncludeThisTable { 
+        
+            get
+            {
+                return GenerateCreate || GenerateRead || GenerateUpdate || GenerateDelete;
+            }
+        
+        }
+
 
         /// <summary>
         /// Return all Foreign Keys associated to this SQLTable

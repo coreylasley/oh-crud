@@ -24,9 +24,27 @@ a, .btn-link {
     max-width: 400px;
 }
 
+.nav-tabs {
+    width: 100%
+}
+
+.codeArea {
+    flex: 1 1 auto;
+    margin-top: 0;
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
 .CodeMirror {
     border: 1px solid #eee;
-    height: auto;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 
 .btn-primary {

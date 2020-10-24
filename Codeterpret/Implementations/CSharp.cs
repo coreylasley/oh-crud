@@ -617,7 +617,7 @@ namespace Codeterpret.Implementations
             StringBuilder sbConstructorAssignments = new StringBuilder();
 
             if (settings.IncludeSerializeDecorator) sbMainClassBlock.AppendLine("[Serializable]");
-            sbMainClassBlock.AppendLine($"public class {table.Name}\n   {{");
+            sbMainClassBlock.AppendLine($"public class {table.Name}\n{{");
             props = "{ get; set; }";
             emptyConstructor = $"\n\tpublic {table.Name}() {{}}\n";
             fullConstructor = $"\n\tpublic {table.Name}([[PARAMETERS]])\n\t{{\n[[ASSIGNMENTS]]\t}}";
@@ -637,16 +637,23 @@ namespace Codeterpret.Implementations
             string ec = (settings.IncludeEmptyConstructor == true ? emptyConstructor : "");
             string fc = (settings.IncludeFullConstructor == true ? fullConstructor.Replace("[[PARAMETERS]]", sbConstructorParameters.ToString()).Replace("[[ASSIGNMENTS]]", sbConstructorAssignments.ToString()) : "");
 
-            sbMainClassBlock.AppendLine(sbClassProperties.ToString() + ec + fc + "\n   }");
+            sbMainClassBlock.AppendLine(sbClassProperties.ToString() + ec + fc + "}");
 
             string ret = sbMainClassBlock.ToString();
 
-            if (settings.Namespace != "")
-            {
-                ret = ret.IncludeNamespace(settings.Namespace);
-            }
+            //if (settings.Namespace != "")
+            // {
+            //    ret = ret.IncludeNamespace(settings.Namespace);
+            //}
 
             if (settings.IncludeSerializeDecorator) ret = "using System.Xml.Serialization;\n\n" + ret;
+
+            return ret;
+        }
+
+        private string GenerateControllerClass(string projectName, string controllerName, string route, string code)
+        {
+            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Linq;\nusing System.Threading.Tasks;nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\n\nnamespace {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    public class {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
 
             return ret;
         }
@@ -659,6 +666,7 @@ namespace Codeterpret.Implementations
             List<string> interfaceMethods = new List<string>();
             List<string> serviceMethods = new List<string>();
             List<string> controllerMethods = new List<string>();
+            List<string> models = new List<string>();
             string code = "";
 
             /*
@@ -678,7 +686,9 @@ namespace Codeterpret.Implementations
                 interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", false, true);
                 serviceMethods = GenerateServiceMethods(tables, fromDBType, "dapper", false, false);
                 controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", false);
+                models = GenerateModels(tables, fromDBType);
 
+                // --- INTERFACES -----------------
                 foreach (string s in interfaceMethods)
                 {
                     code += s + "\n\n";
@@ -687,23 +697,34 @@ namespace Codeterpret.Implementations
                 ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
                 ret[0].Items[0].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
 
+                // --- SERVICES --------------------
                 code = "";
                 foreach (string s in serviceMethods)
                 {
                     code += s + "\n\n";
                 }
-                //WriteFile(rootPath + "Services\\DataService.cs", code);
+                
                 ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
                 ret[0].Items[1].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
 
+
+                // --- CONTROLLERS ----------------
                 code = "";
                 foreach (string s in controllerMethods)
                 {
                     code += s + "\n\n";
                 }
-                //WriteFile(rootPath + "Controllers\\DataController.cs", code);
+                
                 ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[2].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = code });
+                ret[0].Items[2].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
+
+                // --- MODELS ---------------------
+                ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                for(int x = 0; x < models.Count; x++)
+                {
+                    if (tables[x].IncludeThisTable)
+                      ret[0].Items[3].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = models[x]});
+                }
 
             }
             else // If we want each table represented in its own Service and Controller
