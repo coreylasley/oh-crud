@@ -267,7 +267,34 @@ namespace Codeterpret
         }
 
 
+        /// <summary>
+        /// Turns a block of text into C# code of line concatinations 
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="variableName"></param>
+        /// <returns></returns>
+        public static string ToCodeString(this string code, string variableName = "code")
+        {
+            string ret = "";
+            string[] lines = code.Split('\n');
+            int c = 0;
+            foreach(string l in lines)
+            {
+                c++;
+                if (ret == "")
+                    ret = $"string {variableName} = ";
+                else
+                    ret += "\n\t + ";
 
+                ret += $"\"{l.Replace("\\", "\\\\").Replace("\t", "\\t").Replace("\"", "\\\"")}";
+                if (c < lines.Length)
+                    ret += "\\n\"";
+                else
+                    ret += "\";";                
+            }
+
+            return ret;
+        }
 
     }
 }

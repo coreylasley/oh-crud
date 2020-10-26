@@ -1,0 +1,34 @@
+﻿@page "/tools"
+
+@using Codeterpret
+
+<h3>Tools</h3>
+
+<Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
+    <Items>
+        <Tab Name="Stringify">Stringify</Tab>
+    </Items>
+    <Content>
+        <TabPanel Name="Stringify" Class="full-width">
+            <MemoEdit @bind-Text="@text" Rows="25" Size="Size.ExtraLarge"></MemoEdit>
+        </TabPanel>
+        <Button Color="Color.Dark" Clicked="StringifyIt">Stringify It</Button>
+    </Content>
+</Tabs>
+
+@code {
+
+    string selectedTab = "Stringify";
+    string text = "";
+
+    private void OnSelectedTabChanged(string name)
+    {
+        selectedTab = name;
+    }
+
+    public void StringifyIt()
+    {
+        text = text.ToCodeString();
+    }
+
+}

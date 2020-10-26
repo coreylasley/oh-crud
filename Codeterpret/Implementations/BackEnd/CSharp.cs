@@ -45,6 +45,17 @@ namespace Codeterpret.Implementations.BackEnd
                 controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", false);
                 models = GenerateModels(tables, fromDBType);
 
+                // --- CONTROLLERS ----------------
+                code = "";
+                foreach (string s in controllerMethods)
+                {
+                    code += s + "\n\n";
+                }
+
+                ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                ret[0].Items[0].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
+
+
                 // --- INTERFACES -----------------
                 foreach (string s in interfaceMethods)
                 {
@@ -52,7 +63,17 @@ namespace Codeterpret.Implementations.BackEnd
                 }
                 //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
                 ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[0].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+                ret[0].Items[1].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+
+
+                // --- MODELS ---------------------
+                ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                for (int x = 0; x < models.Count; x++)
+                {
+                    if (tables[x].IncludeThisTable)
+                        ret[0].Items[2].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = models[x] });
+                }
+
 
                 // --- SERVICES --------------------
                 code = "";
@@ -62,32 +83,15 @@ namespace Codeterpret.Implementations.BackEnd
                 }
 
                 ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[1].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+                ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
 
-
-                // --- CONTROLLERS ----------------
-                code = "";
-                foreach (string s in controllerMethods)
-                {
-                    code += s + "\n\n";
-                }
-
-                ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[2].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
-
-                // --- MODELS ---------------------
-                ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                for (int x = 0; x < models.Count; x++)
-                {
-                    if (tables[x].IncludeThisTable)
-                        ret[0].Items[3].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = models[x] });
-                }
+               
 
                 // --- MISC PROJECT FILES ---------------
-                ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = "" });
-                ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = GenerateProjectCSPROJ() });
+                ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = GenerateProgramCS(projectName) });
                 ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = "" });
-                ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = GenerateDockerFile(projectName) });
                 ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = "" });
 
             }
@@ -903,6 +907,78 @@ namespace Codeterpret.Implementations.BackEnd
             ret += $"{Indent(methodCode, 1)}\n\t}}\n\n}}";
 
             return ret;
+        }
+
+        private string GenerateDockerFile(string projectName)
+        {
+            string code = "FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim AS base\n"
+                 + "WORKDIR /app\n"
+                 + "EXPOSE 80\n"
+                 + "EXPOSE 443\n\n"                 
+                 + "FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build\n"
+                 + "WORKDIR /src\n"
+                 + $"COPY [\"{projectName}/{projectName}.csproj\", \"{projectName}/\"]\n"
+                 + $"RUN dotnet restore \"{projectName}/{projectName}.csproj\"\n"
+                 + "COPY . .\n"
+                 + $"WORKDIR \"/src/{projectName}\"\n"
+                 + $"RUN dotnet build \"{projectName}.csproj\" -c Release -o /app/build\n\n"
+                 + "FROM build AS publish\n"
+                 + $"RUN dotnet publish \"{projectName}.csproj\" -c Release -o /app/publish\n"
+                 + "FROM base AS final\n"
+                 + "WORKDIR /app\n"
+                 + "COPY --from=publish /app/publish .\n"
+                 + $"ENTRYPOINT [\"dotnet\", \"{projectName}.dll\"]\n";
+
+            return code;
+        }
+
+        private string GenerateProgramCS(string projectName)
+        {
+            string code = "using System;\n"
+                 + "using System.Collections.Generic;\n"
+                 + "using System.Linq;\n"
+                 + "using System.Threading.Tasks;\n"
+                 + "using Microsoft.AspNetCore.Hosting;\n"
+                 + "using Microsoft.Extensions.Configuration;\n"
+                 + "using Microsoft.Extensions.Hosting;\n"
+                 + "using Microsoft.Extensions.Logging;\n"
+                 + "\n\n"
+                 + $"namespace {projectName}\n"
+                 + "{\n"
+                 + "    public class Program\n"
+                 + "    {\n"
+                 + "        public static void Main(string[] args)\n"
+                 + "        {\n"
+                 + "            CreateHostBuilder(args).Build().Run();\n"
+                 + "        }\n\n"
+                 + "        public static IHostBuilder CreateHostBuilder(string[] args) =>\n"
+                 + "            Host.CreateDefaultBuilder(args)\n"
+                 + "                .ConfigureWebHostDefaults(webBuilder =>\n"
+                 + "                {\n"
+                 + "                    webBuilder.UseStartup<Startup>();\n"
+                 + "                });\n"
+                 + "    }\n"
+                 + "}";
+
+            return code;
+        }
+
+        private string GenerateProjectCSPROJ()
+        {
+            string code = "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n\n"
+                 + "  <PropertyGroup>\n"
+                 + "    <TargetFramework>netcoreapp3.1</TargetFramework>\n"
+                 + $"    <UserSecretsId>{Guid.NewGuid()}</UserSecretsId>\n"
+                 + "    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>\n"
+                 + "  </PropertyGroup>\n\n"
+                 + "  <ItemGroup>\n"
+                 + "    <PackageReference Include=\"Dapper\" Version=\"2.0.35\" />\n"
+                 + "    <PackageReference Include=\"Microsoft.VisualStudio.Azure.Containers.Tools.Targets\" Version=\"1.10.9\" />\n"
+                 + "    <PackageReference Include=\"System.Data.SqlClient\" Version=\"4.8.2\" />\n"
+                 + "  </ItemGroup>\n\n"
+                 + "</Project>";
+
+            return code;
         }
 
         private string Indent(string code, int tabs)

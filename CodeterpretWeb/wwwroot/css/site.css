@@ -47,6 +47,10 @@ a, .btn-link {
     right: 0;
 }
 
+.full-width {
+    width: 100%;
+}
+
 .btn-primary {
     color: #fff;
     background-color: #1b6ec2;
