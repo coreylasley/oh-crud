@@ -50,17 +50,28 @@
             {
                 <TableRow>
                     <TableRowHeader>@t.Name</TableRowHeader>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Create))"></Check></TableRowCell>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Read))"></Check></TableRowCell>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Update))"></Check></TableRowCell>
-                    <TableRowCell><Check TValue="bool" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Delete))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" Checked="@t.GenerateCreate" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Create))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" Checked="@t.GenerateRead" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Read))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" Checked="@t.GenerateUpdate" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Update))"></Check></TableRowCell>
+                    <TableRowCell><Check TValue="bool" Checked="@t.GenerateDelete" @onchange="@(e => checkValueChanged(t.Name, Enums.CRUDTypes.Delete))"></Check></TableRowCell>
                     <TableRowCell><TextEdit Placeholder="@("i.e. " + t.Name + "Service")"></TextEdit></TableRowCell>
                 </TableRow>
             }
         </TableBody>
     </Table>
 
-    <Button Clicked="GenerateProject" Color="Color.Secondary">Generate Back-End Project</Button>
+    <Fields>
+        <Field>
+            <Button Clicked="SelectAll" Color="Color.Light">Select All</Button>
+        </Field>
+        <Field>
+            <Button Clicked="DeSelectAll" Color="Color.Light">De-Select All</Button>
+        </Field>
+        <Field>
+            <Button Clicked="GenerateProject" Color="Color.Secondary">Generate Back-End Project</Button>
+        </Field>
+    </Fields>
+
     <br /><br />
 }
 
@@ -186,5 +197,30 @@
         await JSRuntime.InvokeVoidAsync("SetBackendCode", e.Code);
     }
 
+    private void SelectAll()
+    {
+        foreach (var st in SQLTables)
+        {
+            st.GenerateCreate = true;
+            st.GenerateRead = true;
+            st.GenerateUpdate = true;
+            st.GenerateDelete = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private void DeSelectAll()
+    {
+        foreach (var st in SQLTables)
+        {
+            st.GenerateCreate = false;
+            st.GenerateRead = false;
+            st.GenerateUpdate = false;
+            st.GenerateDelete = false;
+        }
+
+        StateHasChanged();
+    }
 
 }
