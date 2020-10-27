@@ -60,7 +60,7 @@ namespace Codeterpret.Interfaces
         /// </summary>
         /// <param name="tables"></param>
         /// <returns></returns>
-        List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, bool groupByTable = false);
+        List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, string controllerName, string interfaceName, bool groupByTable = false);
 
         /// <summary>
         /// Generates a List of Models representing Table Objects in the implemented language
@@ -70,7 +70,7 @@ namespace Codeterpret.Interfaces
         /// <param name="settings"></param>
         /// <param name="IncludeRelevantImports"></param>
         /// <returns></returns>
-        List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, GenerateSettings settings = null, bool IncludeRelevantImports = false);
+        List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false);
 
         
     }

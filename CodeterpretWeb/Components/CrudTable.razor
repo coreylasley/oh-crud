@@ -82,7 +82,7 @@
 
             @if (Items != null)
             {
-                <TreeView Nodes="Items"
+                <TreeView @ref="ProjectTree" Nodes="Items"
                           TNode="ProjectItem"
                           GetChildNodes="@(item => item.Items)"
                           HasChildNodes="@(item => item.Items?.Any() == true)"
@@ -120,7 +120,9 @@
 
     string backendCode;
     string currentFile;
+    TreeView<ProjectItem> ProjectTree;
     bool showProjectPanel = false;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -181,6 +183,8 @@
     {
         CSharp csharp = new CSharp();
         Items = csharp.GenerateProject(SQLTables, Enums.DatabaseTypes.SQLServer, BackEndProjectName.Replace(" ", ""), "Dapper");
+
+        
         showProjectPanel = true;
         StateHasChanged();
 

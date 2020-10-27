@@ -22,9 +22,9 @@ namespace Codeterpret.Implementations.BackEnd
             ORMs = "dapper,ado";
         }
 
-        private string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn InternalServerError();\n\t\t}";
+        private string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}";
         private string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
-        private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode(HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
+        private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
 
         public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false)
         {
@@ -42,8 +42,8 @@ namespace Codeterpret.Implementations.BackEnd
             {
                 interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", false, true);
                 serviceMethods = GenerateServiceMethods(tables, fromDBType, "dapper", false, false);
-                controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", false);
-                models = GenerateModels(tables, fromDBType);
+                controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", "DataController", "IDataService", false);
+                models = GenerateModels(tables, fromDBType, projectName);
 
                 // --- CONTROLLERS ----------------
                 code = "";
@@ -56,6 +56,7 @@ namespace Codeterpret.Implementations.BackEnd
                 ret[0].Items[0].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
 
 
+                code = "";
                 // --- INTERFACES -----------------
                 foreach (string s in interfaceMethods)
                 {
@@ -63,9 +64,10 @@ namespace Codeterpret.Implementations.BackEnd
                 }
                 //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
                 ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[1].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+                ret[0].Items[1].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = GenerateInterfaceClass(projectName, "IDataService", code) });
 
 
+                code = "";
                 // --- MODELS ---------------------
                 ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
                 for (int x = 0; x < models.Count; x++)
@@ -83,7 +85,7 @@ namespace Codeterpret.Implementations.BackEnd
                 }
 
                 ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = code });
+                ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = GenerateServiceClass(projectName, "DataService", "IDataService", code) });
 
                
 
@@ -99,7 +101,7 @@ namespace Codeterpret.Implementations.BackEnd
             {
                 interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", true, true);
                 serviceMethods = GenerateServiceMethods(tables, fromDBType, orm, true, false);
-                controllerMethods = GenerateControllerMethods(tables, fromDBType, "", true);
+                controllerMethods = GenerateControllerMethods(tables, fromDBType, "", "", "", true);
 
                 Dictionary<string, string> injections = new Dictionary<string, string>();
                 Dictionary<string, string> startupInjections = new Dictionary<string, string>();
@@ -360,32 +362,48 @@ namespace Codeterpret.Implementations.BackEnd
             return methods;           
         }
 
-        public override List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, bool groupByTable = false)
+        public override List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, string controllerName, string interfaceName, bool groupByTable = false)
         {
             List<string> methods = new List<string>();
             string sn = "";
+            string cn = "";
+            string inf = "";
+
+            if (controllerName == "")
+                cn = "DataController";
+            else
+                cn = controllerName;
+
+            if (interfaceName == "")
+                inf = "IDataService";
+            else
+                inf = interfaceName;
+
+            methods.Add(GenerateControllerMethod(null, fromDBType, CRUDTypes.Constructor, serviceName, cn, inf));
+
             foreach (SQLTable t in tables)
             {
                 if (serviceName == "")
                     sn = t.Name + "Service";
                 else
-                    sn = serviceName;
+                    sn = serviceName;                
 
                 if (!groupByTable)
                 {
-                    if (t.GenerateCreate) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn));
-                    if (t.GenerateRead) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn));
-                    if (t.GenerateUpdate) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn));
-                    if (t.GenerateDelete) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn));
+                    
+                    if (t.GenerateCreate) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn, cn, inf));
+                    if (t.GenerateRead) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn, cn, inf));
+                    if (t.GenerateUpdate) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn, cn, inf));
+                    if (t.GenerateDelete) methods.Add(GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn, cn, inf));
                 }
                 else
                 {
                     string code = "";
-
-                    if (t.GenerateCreate) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn) + "\n\n";
-                    if (t.GenerateRead) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn) + "\n\n";
-                    if (t.GenerateUpdate) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn) + "\n\n";
-                    if (t.GenerateDelete) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn); 
+                    
+                    if (t.GenerateCreate) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Create, sn, cn, inf) + "\n\n";
+                    if (t.GenerateRead) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Read, sn, cn, inf) + "\n\n";
+                    if (t.GenerateUpdate) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Update, sn, cn, inf) + "\n\n";
+                    if (t.GenerateDelete) code += GenerateControllerMethod(t, fromDBType, CRUDTypes.Delete, sn, cn, inf); 
 
                     methods.Add(code.Trim());
                 }
@@ -393,12 +411,12 @@ namespace Codeterpret.Implementations.BackEnd
             return methods;
         }
 
-        public override List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, GenerateSettings settings = null, bool IncludeRelevantImports = false)
+        public override List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false)
         {
             List<string> models = new List<string>();
             foreach(SQLTable t in tables)
             {
-                models.Add(GenerateModel(t, fromDBType, settings, IncludeRelevantImports));
+                models.Add(GenerateModel(t, fromDBType, projectName, settings, IncludeRelevantImports));
             }
             return models;
         }
@@ -507,7 +525,7 @@ namespace Codeterpret.Implementations.BackEnd
             return method.ToString();
         }
 
-        private string GenerateControllerMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string serviceName)
+        private string GenerateControllerMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string serviceName, string controllerName, string interfaceName)
         {
             string method = "";
 
@@ -522,6 +540,18 @@ namespace Codeterpret.Implementations.BackEnd
             string byRoute = "";
             string accessible = "public async Task<IActionResult>";
             string methodEnd = "";
+
+            if (crudType == CRUDTypes.Constructor)
+            {
+                
+                return $"       {interfaceName}  _{serviceName};\n"
+                                 + "\n"
+                                 + $"    public {controllerName}({interfaceName} {serviceName})\n"
+                                 + "    {\n"
+                                 + $"        _{serviceName} = {serviceName};\n"
+                                 + "    }";
+                
+            }
 
             // Get the primary key colums to be used in method names, and parameters
             foreach (var c in table.SQLColumns)
@@ -560,17 +590,25 @@ namespace Codeterpret.Implementations.BackEnd
 
             switch (crudType)
             {
+                case CRUDTypes.Constructor:
+                    method = $"   I{serviceName}  _{serviceName};\n"
+                                 + "\n"
+                                 + $"    public {controllerName}(I{serviceName} {serviceName})\n"
+                                 + "    {\n"
+                                 + $"        _{serviceName} = {serviceName};\n"
+                                 + "    }";
+                    break;
                 case CRUDTypes.Create:
                     methodName = $"[HttpPost(\"{table.Name}/{Route}\")]\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
                     methodNameCall = $"Add{table.Name}";
                     call = ParamsCall;
-                    method = $"\t{methodName}\n\t{{\n\t\tvar ret = await {serviceName}.{methodNameCall}({call});\n\t\treturn Ok(ret);\n\t}}";
+                    method = $"\t{methodName}\n\t{{\n\t\tvar ret = await _{serviceName}.{methodNameCall}({call});\n\t\treturn Ok(ret);\n\t}}";
                     break;
                 case CRUDTypes.Read:
                     methodName = $"[HttpGet(\"{table.Name}/{byRoute}\")]\n\t{accessible} Get{table.Name}{by}({byParams}){methodEnd}";
                     methodNameCall = $"Read{table.Name}{by}";
                     call = byParamsCall;
-                    callToService = $"var ret = await {serviceName}.{methodNameCall}({call})";
+                    callToService = $"var ret = await _{serviceName}.{methodNameCall}({call});";
                     condition = $"ret != null";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerOkOrBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Found")).Replace("<RETURN>", "ret").Replace("<CALL>", callToService)}\n\t}}";
                     break;
@@ -578,14 +616,14 @@ namespace Codeterpret.Implementations.BackEnd
                     methodName = $"[HttpPut(\"{table.Name}/{Route}\")]\n\t{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
                     methodNameCall = $"Update{table.Name}";
                     call = ParamsCall;
-                    condition = $"await {serviceName}.{methodNameCall}({call})";
+                    condition = $"await _{serviceName}.{methodNameCall}({call})";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Updated"))}\n\t}}";
                     break;
                 case CRUDTypes.Delete:
                     methodName = $"[HttpDelete(\"{table.Name}/{byRoute}\")]\n\t{accessible} Delete{table.Name}{by}({byParams}){methodEnd}";
                     methodNameCall = $"Delete{table.Name}{by}";
                     call = byParamsCall;
-                    condition = $"await {serviceName}.{methodNameCall}({call})";
+                    condition = $"await _{serviceName}.{methodNameCall}({call})";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Deleted"))}\n\t}}";
                     break;
             }
@@ -731,7 +769,7 @@ namespace Codeterpret.Implementations.BackEnd
             return body;
         }
 
-        private string GenerateModel(SQLTable table, DatabaseTypes fromDBType, GenerateSettings settings = null, bool IncludeRelevantImports = false)
+        private string GenerateModel(SQLTable table, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false)
         {
             if (settings == null) settings = new GenerateSettings();
 
@@ -768,7 +806,7 @@ namespace Codeterpret.Implementations.BackEnd
 
             sbMainClassBlock.AppendLine(sbClassProperties.ToString() + ec + fc + "}");
 
-            string ret = sbMainClassBlock.ToString();
+            string ret = $"namespace {projectName}.Models\n{{\n{sbMainClassBlock.ToString().Indent('\t', 1)}\n}}";
 
             //if (settings.Namespace != "")
             // {
@@ -782,16 +820,57 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateControllerClass(string projectName, string controllerName, string route, string code)
         {
-            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Linq;\nusing System.Threading.Tasks;\nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\n\nnamespace {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    public class {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
+            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Net;\nusing System.Linq;\nusing System.Threading.Tasks;\nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\nusing {projectName}.Interfaces;\nusing {projectName}.Services;\nusing {projectName}.Models;\n\nnamespace {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    public class {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
+
+            return ret;
+        }
+
+        private string GenerateInterfaceClass(string projectName, string interfaceName, string code)
+        {
+            string ret = "using System;\n"
+                         + "using System.Collections.Generic;\n"
+                         + "using System.Linq;\n"
+                         + "using System.Threading.Tasks;\n"
+                         + $"using {projectName}.Models;\n"
+                         + "\n"
+                         + $"namespace {projectName}.Interfaces\n"
+                         + "{\n"
+                         + $"    public interface {interfaceName}\n"
+                         + "    {\n"
+                         + $"{code.Indent('\t', 1)}"
+                         + "    }\n"
+                         + "}";
+
+            return ret;
+
+        }
+
+        private string GenerateServiceClass(string projectName, string serviceName, string interfaceName, string code)
+        {
+            string ret = "using System;\n"
+                         + "using System.Collections.Generic;\n"
+                         + "using System.Linq;\n"
+                         + "using System.Threading.Tasks;\n"
+                         + "using System.Data.SqlClient;\n"
+                         + "using Dapper;\n"
+                         + $"using {projectName}.Models;\n"
+                         + "\n"
+                         + $"namespace {projectName}.Services\n"
+                         + "{"
+                         + $"    public class {serviceName} : {interfaceName}\n"
+                         + "    {\n"
+                         + "        private string _connectionString;\n\n"
+                         + $"{code.Indent('\t', 1)}"
+                         + "    }\n"
+                         + "}";
 
             return ret;
         }
 
 
-
         private string GenerateStartupClassFile(string baseNamespace, string className, Dictionary<string, string> injectServices, DatabaseTypes fromDBType)
         {
-            string ret = "using System;\n" +
+            string ret = "using System;\n" +                         
                          "using System.Collections.Generic;\n" +
                          "using System.Linq;\n" +
                          "using System.Threading.Tasks;\n" +

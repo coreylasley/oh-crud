@@ -27,7 +27,8 @@ namespace Codeterpret.Common
             Create,
             Read,
             Update,
-            Delete
+            Delete,
+            Constructor
         }
 
         public enum BackEndProjectTypes
