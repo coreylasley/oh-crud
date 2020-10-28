@@ -93,9 +93,12 @@ namespace Codeterpret.Implementations.BackEnd
                 // --- MISC PROJECT FILES ---------------
                 ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = GenerateProjectCSPROJ() });
                 ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = GenerateProgramCS(projectName) });
-                ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = "" });
+
+                Dictionary<string, string> IandS = new Dictionary<string, string>();
+                IandS.Add("IDataService", "DataService");
+                ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = GenerateStartupCS(projectName, IandS) });
                 ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = GenerateDockerFile(projectName) });
-                ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = "" });
+                ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = GenerateREADME(projectName, tables) });
 
             }
             else // If we want each table represented in its own Service and Controller
@@ -1057,6 +1060,128 @@ namespace Codeterpret.Implementations.BackEnd
                  + "    <PackageReference Include=\"System.Data.SqlClient\" Version=\"4.8.2\" />\n"
                  + "  </ItemGroup>\n\n"
                  + "</Project>";
+
+            return code;
+        }
+
+        private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices)
+        {
+            string code = "using System;\n"
+                         + "using System.Collections.Generic;\n"
+                         + "using System.Linq;\n"
+                         + "using System.Threading.Tasks;\n"
+                         + "using Microsoft.AspNetCore.Builder;\n"
+                         + "using Microsoft.AspNetCore.Hosting;\n"
+                         + "using Microsoft.AspNetCore.HttpsPolicy;\n"
+                         + "using Microsoft.AspNetCore.Mvc;\n"
+                         + "using Microsoft.Extensions.Configuration;\n"
+                         + "using Microsoft.Extensions.DependencyInjection;\n"
+                         + "using Microsoft.Extensions.Hosting;\n"
+                         + "using Microsoft.Extensions.Logging;\n"
+                         + $"using {projectName}.Interfaces;\n"
+                         + $"using {projectName}.Services;\n"
+                         + "\n"
+                         + $"namespace {projectName}\n"
+                         + "{\n"
+                         + "    public class Startup\n"
+                         + "    {\n"
+                         + "        public Startup(IConfiguration configuration)\n"
+                         + "        {\n"
+                         + "            Configuration = configuration;\n"
+                         + "        }\n"
+                         + "\n"
+                         + "        public IConfiguration Configuration { get; }\n"
+                         + "\n"
+                         + "        // This method gets called by the runtime. Use this method to add services to the container.\n"
+                         + "        public void ConfigureServices(IServiceCollection services)\n"
+                         + "        {\n"
+                         + "            services.AddControllers();\n";
+
+            foreach (var i in interfacesAndServices)
+            {
+                code += $"            services.AddSingleton<{i.Key}, {i.Value}>();\n";
+            }
+            
+                   code += "        }\n"
+                         + "\n"
+                         + "        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.\n"
+                         + "        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)\n"
+                         + "        {\n"
+                         + "            if (env.IsDevelopment())\n"
+                         + "            {\n"
+                         + "                app.UseDeveloperExceptionPage();\n"
+                         + "            }\n"
+                         + "\n"
+                         + "            app.UseHttpsRedirection();\n"
+                         + "\n"
+                         + "            app.UseRouting();\n"
+                         + "\n"
+                         + "            app.UseAuthorization();\n"
+                         + "\n"
+                         + "            app.UseEndpoints(endpoints =>\n"
+                         + "            {\n"
+                         + "                endpoints.MapControllers();\n"
+                         + "            });\n"
+                         + "        }\n"
+                         + "    }\n"
+                         + "}\n"
+                         + "";
+
+            return code;
+        }
+
+        private string GenerateREADME(string projectName, List<SQLTable> sqlTables)
+        {
+            // Based on: https://raw.githubusercontent.com/bbc/REST-API-example/master/README.md
+
+            string code = "\n"
+                 + $"# {projectName}\n"
+                 + "\n"
+                 + "Replace this with a better description of the API\n"
+                 + "\n"
+                 + "## Install\n"
+                 + "\n"
+                 + "    [Replace with install command]\n"
+                 + "\n"
+                 + "## Run the app\n"
+                 + "\n"
+                 + "    [Replace with run command]\n"
+                 + "\n"
+                 + "## Run the tests\n"
+                 + "\n"
+                 + "    [replace with command to run tests]\n"
+                 + "\n"
+                 + "# REST API\n"
+                 + "\n"
+                 + "The following describes the API.\n"
+                 + "\n";
+
+            foreach (var s in sqlTables)
+            {
+                if (s.GenerateCreate)
+                {
+                    code += $"## Create {s.Name}\n"
+                    + "\n"
+                    + "### Request\n"
+                    + "\n"
+                    + $"`POST /{s.Name}/`\n"
+                    + "\n"
+                    + $"    curl -i -H 'Accept: application/json' http://localhost:5000/{s.Name}/\n"
+                    + "\n"
+                    + "### Response\n"
+                    + "\n"
+                    + "    HTTP/1.1 200 OK\n"
+                    + "    Date: Thu, 24 Feb 2011 12:36:30 GMT\n"
+                    + "    Status: 200 OK\n"
+                    + "    Connection: close\n"
+                    + "    Content-Type: application/json\n"
+                    + "    Content-Length: 2\n"
+                    + "\n"
+                    + "    []\n"
+                    + "\n"
+                    + "";
+                }
+            }
 
             return code;
         }

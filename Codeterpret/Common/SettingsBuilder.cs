@@ -36,8 +36,8 @@ namespace Codeterpret.Common
 
             so = new List<SettingOption>();
             so.Add(new SettingOption { Value = "1", Label = "Everything in same Class" });
-            so.Add(new SettingOption { Value = "2", Label = "In Class by Table" });
-            so.Add(new SettingOption { Value = "3", Label = "In Class by CRUD Operation (i.e. CreateService)" });
+            //so.Add(new SettingOption { Value = "2", Label = "In Class by Table" });
+            //so.Add(new SettingOption { Value = "3", Label = "In Class by CRUD Operation (i.e. CreateService)" });
             settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ServiceClassOrganization", Label = "Service Class Organization", Options = so, Display = true });
 
             return settings;
