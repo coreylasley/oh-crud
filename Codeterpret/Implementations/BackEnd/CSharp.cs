@@ -26,7 +26,7 @@ namespace Codeterpret.Implementations.BackEnd
         private string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
         private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
 
-        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false)
+        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup group)
         {
             List<ProjectItem> ret = new List<ProjectItem>();
             ret.Add(new ProjectItem { Name = projectName, ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
@@ -36,6 +36,8 @@ namespace Codeterpret.Implementations.BackEnd
             List<string> controllerMethods = new List<string>();
             List<string> models = new List<string>();
             string code = "";
+
+            bool seperateFilesPerTable = false;
 
             // If all the table code exists in a single Service and a single Controller....
             if (!seperateFilesPerTable)
@@ -88,7 +90,6 @@ namespace Codeterpret.Implementations.BackEnd
                 ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = GenerateServiceClass(projectName, "DataService", "IDataService", code) });
 
                
-
                 // --- MISC PROJECT FILES ---------------
                 ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = GenerateProjectCSPROJ() });
                 ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = GenerateProgramCS(projectName) });
@@ -856,7 +857,7 @@ namespace Codeterpret.Implementations.BackEnd
                          + $"using {projectName}.Models;\n"
                          + "\n"
                          + $"namespace {projectName}.Services\n"
-                         + "{"
+                         + "{\n"
                          + $"    public class {serviceName} : {interfaceName}\n"
                          + "    {\n"
                          + "        private string _connectionString;\n\n"

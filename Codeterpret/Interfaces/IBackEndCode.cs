@@ -45,7 +45,7 @@ namespace Codeterpret.Interfaces
         /// <param name="tables"></param>
         /// <param name="rootPath"></param>
         /// <returns></returns>
-        IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false);
+        IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup settings);
 
         /// <summary>
         /// Generates a List of Service Methods for basic CRUD Operations in the implemented language

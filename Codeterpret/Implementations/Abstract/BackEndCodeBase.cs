@@ -77,7 +77,7 @@ namespace Codeterpret.Implementations.Abstract
             throw new Exception("GenerateModels Method has not yet been implemented");
         }
 
-        public virtual IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, bool seperateFilesPerTable = false)
+        public virtual IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup settings)
         {
             throw new Exception("GenerateProject Method has not yet been implemented");
         }

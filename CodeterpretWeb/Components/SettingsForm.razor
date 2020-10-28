@@ -1,0 +1,164 @@
+﻿@using Codeterpret.Common
+
+@foreach (var sg in settingGroups.SettingGroups)
+{
+    <Fields>
+
+        @foreach (var s in sg.Settings)
+        {
+            @if (s.Type == InputTypes.Select)
+            {
+
+                @if (sg.ShouldDisplay(s.Key))
+                {
+                    <Field>
+                        <FieldLabel><b>@s.Label</b></FieldLabel>
+                        <Select TValue="string" SelectedValueChanged="@(e => ValueChanged(InputTypes.Select, s.TypeIndex, s.Key))" @ref="inputSelects[s.TypeIndex]">
+                            @foreach (var o in s.Options)
+                            {
+                                <SelectItem Value="@o.Value">@o.Label</SelectItem>
+                            }
+                        </Select>
+                    </Field>
+                }
+            }
+
+            @if (s.Type == InputTypes.Check)
+            {
+
+                @if (sg.ShouldDisplay(s.Key))
+                {
+                    <Field>
+                        <Check TValue="bool" Checked="@s.GetValueAsBool()" @onchange="@(e => ValueChanged(InputTypes.Check, s.TypeIndex, s.Key))" @ref="inputCheckboxes[s.TypeIndex]">@s.Label</Check>
+                    </Field>
+                }
+            }
+
+            @if (s.Type == InputTypes.Text)
+            {
+
+                @if (sg.ShouldDisplay(s.Key))
+                {
+                    <Field>
+                        <FieldLabel><b>@s.Label</b></FieldLabel>
+                        <TextEdit Text="@s.Value" TextChanged="@(e => ValueChanged(InputTypes.Text, s.TypeIndex, s.Key))" @ref="inputTexts[s.TypeIndex]"></TextEdit>
+                    </Field>
+                }
+            }
+
+            @if (s.Type == InputTypes.Label && sg.ShouldDisplay(s.Key))
+            {
+                <Field>
+                    <Label><b>@s.Label</b> @s.Value</Label>
+                </Field>
+            }
+        }
+
+    </Fields>
+}
+
+@code {
+
+    List<Check<bool>> inputCheckboxes = new List<Check<bool>>();
+    List<TextEdit> inputTexts = new List<TextEdit>();
+    List<Select<string>> inputSelects = new List<Select<string>>();
+
+    SettingGroupCollection settingGroups = new SettingGroupCollection();
+    SettingGroup settings = new SettingGroup();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LoadSettings(SettingsBuilder.GetSettings(Enums.BackEndProjectTypes.CSharpNETCore31Dapper));
+            StateHasChanged();
+        }
+    }
+
+    public void LoadSettings(SettingGroup settingGroup)
+    {
+
+
+        settings = settingGroup;
+
+        int typeIndex = -1;
+        foreach (var c in settingGroup.Settings.Where(x => x.Type == InputTypes.Check))
+        {
+            inputCheckboxes.Add(new Check<bool>());
+            typeIndex++;
+            c.TypeIndex = typeIndex;
+        }
+
+        typeIndex = -1;
+        foreach (var c in settingGroup.Settings.Where(x => x.Type == InputTypes.Select))
+        {
+            inputSelects.Add(new Select<string>());
+            typeIndex++;
+            c.TypeIndex = typeIndex;
+        }
+
+        typeIndex = -1;
+        foreach (var c in settingGroup.Settings.Where(x => x.Type == InputTypes.Text))
+        {
+            inputTexts.Add(new TextEdit());
+            typeIndex++;
+            c.TypeIndex = typeIndex;
+        }
+
+        settingGroups = new SettingGroupCollection(settingGroup);
+
+        //StateHasChanged();
+    }
+
+    public void Refresh()
+    {
+        StateHasChanged();
+    }
+
+
+    private void ValueChanged(InputTypes settingType, int index, string key)
+    {
+        string value = "";
+
+        switch (settingType)
+        {
+            case InputTypes.Select:
+                value = inputSelects[index].SelectedValue.ToString();
+                break;
+            case InputTypes.Check:
+                inputCheckboxes[index].Checked = !inputCheckboxes[index].Checked;
+                value = (inputCheckboxes[index].Checked).ToString().ToLower();
+                break;
+            case InputTypes.Text:
+                value = inputTexts[index].Text;
+                break;
+        }
+
+        var setting = settings.Settings.FirstOrDefault(x => x.Key == key);
+        if (setting != null)
+        {
+            setting.Value = value;
+
+            int displayChangeCount = 0;
+
+            foreach (var os in settings.Settings.Where(x => x.OnlyDisplayWhenKey == key))
+            {
+                if (!os.OnlyDisplayWhenValueMultiValues)
+                {
+                    os.Display = os.OnlyDisplayWhenValue == value;
+                }
+                else
+                {
+                    os.Display = os.OnlyDisplayWhenValue.Split(',').Contains(value);
+                }
+                displayChangeCount++;
+            }
+
+            if (displayChangeCount > 0)
+                StateHasChanged();
+        }
+
+    }
+
+
+}
