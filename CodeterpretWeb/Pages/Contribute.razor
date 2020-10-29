@@ -1,0 +1,20 @@
+﻿@using Codeterpret.Common
+
+@page "/contribute"
+
+<h3><b>Database Schema Translator and Project Builder</b></h3>
+
+@html
+
+@code {
+
+    MarkupString html;
+
+    protected override async Task OnInitializedAsync()
+    {
+        html = HttpHelper.GetHtmlFromMarkdown("https://raw.githubusercontent.com/coreylasley/Codeterpret/master/README.md");
+    }
+
+
+
+}
