@@ -122,9 +122,13 @@
             </TabPanel>
             <TabPanel Name="backendProject">
                 <br />
+                <Alert @ref="InProgress" Color="Color.Info">
+                    <AlertMessage>Not fully functional</AlertMessage>
+                    <AlertDescription>I am still working on the code generation, which is not complete and contains some bugs. You can still play around with what I have deployed so far.</AlertDescription>
+                </Alert>
                 <Field>
-                    <Label><b>Not fully functional:</b> Generate a backend project from the sql script. Currently a .NET Core 3.1 Web API with Dapper is being developed.</Label>
-                    <br /><br />
+                    <br />
+                    <h3>Project Generation Settings</h3>
                     <CrudTable @ref="crudTable"></CrudTable>
 
                 </Field>
@@ -146,6 +150,7 @@
     string selectedTab;
     Alert fromDBTypeInfo;
     Alert translateFailed;
+    Alert InProgress;
     CrudTable crudTable;
 
 
@@ -185,7 +190,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        
+
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -198,6 +203,8 @@
             StateHasChanged();
 
             await SetupCodeMirror("", "");
+
+            InProgress.Show();
         }
     }
 
