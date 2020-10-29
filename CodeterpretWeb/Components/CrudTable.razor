@@ -2,6 +2,8 @@
 @using Codeterpret.Implementations.BackEnd;
 @using Codeterpret.SQL;
 @using Codeterpret.Common;
+@using Codeterpret.Interfaces;
+@using Codeterpret.Implementations;
 @using System.Linq;
 
 @inject IJSRuntime JSRuntime
@@ -9,23 +11,23 @@
 
 @if (SQLTables != null && SQLTables.Count > 0)
 {
-<Fields>
-    <Field>
-        <FieldLabel><b>Backend Project Name</b></FieldLabel>
-        <TextEdit @bind-Text="@BackEndProjectName"></TextEdit>
-    </Field>
-    <Field>
-        <FieldLabel><b>Backend Project Type</b></FieldLabel>
-        <Select @ref="BackendProjectType" TValue="Enums.BackEndProjectTypes" SelectedValueChanged="BackendProjectTypeChanged">
-            @foreach (EnumDetail ed in backendProjectTypes)
-            {
-                <SelectItem Value="@ed.Value">@ed.Description</SelectItem>
-            }
-        </Select>
-    </Field>
-</Fields>
+    <Fields>
+        <Field>
+            <FieldLabel><b>Backend Project Name</b></FieldLabel>
+            <TextEdit @bind-Text="@BackEndProjectName"></TextEdit>
+        </Field>
+        <Field>
+            <FieldLabel><b>Backend Project Type</b></FieldLabel>
+            <Select @ref="BackendProjectType" TValue="Enums.BackEndProjectTypes" SelectedValueChanged="BackendProjectTypeChanged">
+                @foreach (EnumDetail ed in backendProjectTypes)
+                {
+                    <SelectItem Value="@ed.Value">@ed.Description</SelectItem>
+                }
+            </Select>
+        </Field>
+    </Fields>
 
-<SettingsForm @ref="settingForm"></SettingsForm>
+    <SettingsForm @ref="settingForm"></SettingsForm>
 
     <Label>Select the CRUD operations for each table that you wish to generate service methods for</Label>
     <Table Hoverable="true" Striped="true" Narrow="true">
@@ -66,11 +68,14 @@
         </Field>
     </Fields>
 
-    <br /><br />
+    <br />
+    <br />
 }
 
 <div id="backendCodePanel">
+    <h3>@BackEndProjectName</h3>
     <div class="project-container">
+               
 
         <div class="project-panel project-tree">
 
@@ -120,6 +125,8 @@
     TreeView<ProjectItem> ProjectTree;
     bool showProjectPanel = false;
 
+    Project Project = new Project(Enums.BackEndProjectTypes.CSharpNETCore31);
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -131,13 +138,14 @@
     {
         if (firstRender)
         {
-            await InitializeBackendCode();            
+            await InitializeBackendCode();
         }
     }
 
     private void BackendProjectTypeChanged()
     {
-        var settings = SettingsBuilder.GetSettings(BackendProjectType.SelectedValue);
+        Project = new Project(BackendProjectType.SelectedValue);
+        var settings = Project.CodeGenerator.SettingsDefinition;
         settingForm.LoadSettings(settings);
     }
 
@@ -184,22 +192,13 @@
 
     private async Task GenerateProject()
     {
-        CSharp csharp = new CSharp();
-        Items = csharp.GenerateProject(
-            SQLTables,
-            Enums.DatabaseTypes.SQLServer,
-            BackEndProjectName.Replace(" ", ""),
-            "Dapper",
-            SettingsBuilder.GetSettings(Enums.BackEndProjectTypes.CSharpNETCore31Dapper));
-
+        Items = Project.CodeGenerator.GenerateProject(SQLTables, Enums.DatabaseTypes.SQLServer, BackEndProjectName.Replace(" ", ""), "", settingForm.settings);
 
         showProjectPanel = true;
         StateHasChanged();
 
         await JSRuntime.InvokeAsync<object>("ShowBackendCodePanel");
         await JSRuntime.InvokeVoidAsync("SetBackendCode", "");
-
-        //await InitializeBackendCode();
 
     }
 

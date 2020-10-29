@@ -15,17 +15,62 @@ namespace Codeterpret.Implementations.BackEnd
 
     public class CSharp : BackEndCodeBase
     {
+
+        private const string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}";
+        private const string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
+        private const string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
+
+
+        /// <summary>
+        /// Settings that will be rendered on the Project Builder to obtain user input needed to code generation
+        /// </summary>
+        public override SettingGroup SettingsDefinition
+        {
+            get
+            {
+                SettingGroup settings = new SettingGroup();
+
+                List<SettingOption> so = null;
+                
+                so = new List<SettingOption>();
+                so.Add(new SettingOption { Value = "1", Label = "Dapper" });
+                //so.Add(new SettingOption { Value = "2", Label = "ADO.NET" });               
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ORM", Label = "Object-Relational Mapping (ORM)", Options = so, Display = true });
+
+                so = new List<SettingOption>();
+                so.Add(new SettingOption { Value = "1", Label = "Angular" });
+                so.Add(new SettingOption { Value = "2", Label = "Other" });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ExpectedProjectType", Label = "Expected Front-End Project Type", Options = so, Display = true });
+
+                so = new List<SettingOption>();
+                so.Add(new SettingOption { Value = "1", Label = "Everything in same Class" });
+                //so.Add(new SettingOption { Value = "2", Label = "In Class by Table" });
+                //so.Add(new SettingOption { Value = "3", Label = "In Class by CRUD Operation (i.e. CreateService)" });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ServiceClassOrganization", Label = "Service Class Organization", Options = so, Display = true });
+                settings.Settings.Add(new Setting { Type = InputTypes.LineBreak, Display = true });
+
+                settings.Settings.Add(new Setting { Type = InputTypes.Check, Key = "IncludeTest", Label = "Include Unit Test Project", Display = true });
+                settings.Settings.Add(new Setting { Type = InputTypes.LineBreak, Display = true });
+
+                so = new List<SettingOption>();
+                so.Add(new SettingOption { Value = "1", Label = "NUnit" });
+                //so.Add(new SettingOption { Value = "2", Label = "xUnit" });               
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "UnitTestFramework", Label = "Unit Test Framework", Options = so, Display = false, OnlyDisplayWhenKey = "IncludeTest", OnlyDisplayWhenValue = "true" });
+
+                so = new List<SettingOption>();
+                so.Add(new SettingOption { Value = "1", Label = "Moq" });                               
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "MockingLibrary", Label = "Mocking Library", Options = so, Display = false, OnlyDisplayWhenKey = "IncludeTest", OnlyDisplayWhenValue = "true" });
+
+                return settings;
+            }
+        }
        
         public CSharp()
         {
-            PropertyDefinitionsShouldNotContain = "enum,struct,event,const";
-            ORMs = "dapper,ado";
+            PropertyDefinitionsShouldNotContain = "enum,struct,event,const";            
         }
 
-        private string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}";
-        private string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
-        private string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
-
+        
         public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup group)
         {
             List<ProjectItem> ret = new List<ProjectItem>();

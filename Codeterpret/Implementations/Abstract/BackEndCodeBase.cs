@@ -15,7 +15,7 @@ namespace Codeterpret.Implementations.Abstract
         
         public string PropertyDefinitionsShouldNotContain { get; set; }
 
-        public string ORMs { get; set; }
+        public virtual SettingGroup SettingsDefinition { get; }
 
 
         public string GenerateSQLScript(string Code, DatabaseTypes dbType)

@@ -15,10 +15,7 @@ namespace Codeterpret.Interfaces
         /// </summary>
         string PropertyDefinitionsShouldNotContain { get; set; }
 
-        /// <summary>
-        /// Comma delimited string of ORM names that are supported in code generation
-        /// </summary>
-        string ORMs { get; set; }
+        SettingGroup SettingsDefinition { get; }
 
         /// <summary>
         /// Generates a SQL Script from a block of Code. NOTE: GenerateSQLTables() must be implemented.

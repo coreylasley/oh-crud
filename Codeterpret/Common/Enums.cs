@@ -33,8 +33,8 @@ namespace Codeterpret.Common
 
         public enum BackEndProjectTypes
         {
-            [Description("C# .NET Core 3.1 Web API w/ Dapper")]
-            CSharpNETCore31Dapper = 1
+            [Description("C# .NET Core 3.1 Web API")]
+            CSharpNETCore31 = 1
         }
 
         public enum FrontEndProjectTypes

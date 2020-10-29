@@ -1,4 +1,5 @@
 ﻿@using Codeterpret.Common
+@using Codeterpret.Implementations
 
 @foreach (var sg in settingGroups.SettingGroups)
 {
@@ -64,21 +65,21 @@
     List<Select<string>> inputSelects = new List<Select<string>>();
 
     SettingGroupCollection settingGroups = new SettingGroupCollection();
-    SettingGroup settings = new SettingGroup();
+    public SettingGroup settings = new SettingGroup();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            LoadSettings(SettingsBuilder.GetSettings(Enums.BackEndProjectTypes.CSharpNETCore31Dapper));
+            var Project = new Project(Enums.BackEndProjectTypes.CSharpNETCore31);
+            var settings = Project.CodeGenerator.SettingsDefinition;
+            LoadSettings(settings);
             StateHasChanged();
         }
     }
 
     public void LoadSettings(SettingGroup settingGroup)
     {
-
-
         settings = settingGroup;
 
         int typeIndex = -1;
