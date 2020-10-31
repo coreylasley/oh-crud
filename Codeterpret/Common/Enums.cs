@@ -31,6 +31,12 @@ namespace Codeterpret.Common
             Constructor
         }
 
+        public enum FileOutputTypes
+        {
+            Text,
+            HTML
+        }
+
         public enum BackEndProjectTypes
         {
             [Description("C# .NET Core 3.1 Web API")]

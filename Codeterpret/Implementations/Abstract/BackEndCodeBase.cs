@@ -62,22 +62,7 @@ namespace Codeterpret.Implementations.Abstract
             throw new Exception("GenerateSQLTables Method has not yet been implemented");            
         }
 
-        public virtual List<string> GenerateServiceMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string ORM, bool groupByTable = false, bool AsInterface = false)
-        {
-            throw new Exception("GenerateServiceMethods Method has not yet been implemented");
-        }
-
-        public virtual List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, string controllerName, string interfaceName, bool groupByTable = false)
-        {
-            throw new Exception("GenerateControllerMethods Method has not yet been implemented");
-        }
-
-        public virtual List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false)
-        {
-            throw new Exception("GenerateModels Method has not yet been implemented");
-        }
-
-        public virtual IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup settings)
+        public virtual IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, SettingGroup settings, FileOutputTypes outputType)
         {
             throw new Exception("GenerateProject Method has not yet been implemented");
         }

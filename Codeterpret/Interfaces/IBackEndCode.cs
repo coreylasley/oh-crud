@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using static Codeterpret.Common.Enums;
 using Codeterpret.SQL;
 using Codeterpret.Common;
@@ -42,32 +39,8 @@ namespace Codeterpret.Interfaces
         /// <param name="tables"></param>
         /// <param name="rootPath"></param>
         /// <returns></returns>
-        IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup settings);
-
-        /// <summary>
-        /// Generates a List of Service Methods for basic CRUD Operations in the implemented language
-        /// </summary>
-        /// <param name="tables"></param>
-        /// <param name="AsInterface"></param>
-        /// <returns></returns>
-        List<string> GenerateServiceMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string ORM, bool groupByTable = false, bool AsInterface = false);
-        
-        /// <summary>
-        /// Generates a List of Controller Methods that call Service Methods in the implemented language 
-        /// </summary>
-        /// <param name="tables"></param>
-        /// <returns></returns>
-        List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, string controllerName, string interfaceName, bool groupByTable = false);
-
-        /// <summary>
-        /// Generates a List of Models representing Table Objects in the implemented language
-        /// </summary>
-        /// <param name="tables"></param>
-        /// <param name="fromDBType"></param>
-        /// <param name="settings"></param>
-        /// <param name="IncludeRelevantImports"></param>
-        /// <returns></returns>
-        List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false);
+        IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, SettingGroup settings, FileOutputTypes outputType);
+             
 
         
     }

@@ -16,10 +16,18 @@ namespace Codeterpret.Implementations.BackEnd
     public class CSharp : BackEndCodeBase
     {
 
+        private enum ORMTypes
+        {
+            Dapper,
+            ADO
+        }
+
         private const string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}";
         private const string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
         private const string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
 
+        private CodeColoring CSharpPalette = new CodeColoring(CodeColoring.ColorPalettes.CSharp);
+        private CodeColoring NoPalette = new CodeColoring(CodeColoring.ColorPalettes.None);
 
         /// <summary>
         /// Settings that will be rendered on the Project Builder to obtain user input needed to code generation
@@ -71,7 +79,7 @@ namespace Codeterpret.Implementations.BackEnd
         }
 
         
-        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, string orm, SettingGroup group)
+        public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, SettingGroup group, FileOutputTypes outputType)
         {
             List<ProjectItem> ret = new List<ProjectItem>();
             ret.Add(new ProjectItem { Name = projectName, ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
@@ -84,11 +92,14 @@ namespace Codeterpret.Implementations.BackEnd
 
             bool seperateFilesPerTable = false;
 
+            ORMTypes ORM = ORMTypes.Dapper;
+            if (group.GetValue("ORM").ToLower() == "ado") ORM = ORMTypes.ADO;
+
             // If all the table code exists in a single Service and a single Controller....
             if (!seperateFilesPerTable)
             {
-                interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", false, true);
-                serviceMethods = GenerateServiceMethods(tables, fromDBType, "dapper", false, false);
+                interfaceMethods = GenerateServiceMethods(tables, fromDBType, ORM, false, true);
+                serviceMethods = GenerateServiceMethods(tables, fromDBType, ORM, false, false);
                 controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", "DataController", "IDataService", false);
                 models = GenerateModels(tables, fromDBType, projectName);
 
@@ -100,7 +111,7 @@ namespace Codeterpret.Implementations.BackEnd
                 }
 
                 ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[0].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = GenerateControllerClass(projectName, "Crud", "controller", code) });
+                ret[0].Items[0].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateControllerClass(projectName, "Crud", "controller", code)) : CSharpPalette.RenderWithNoColor(GenerateControllerClass(projectName, "Crud", "controller", code)) });
 
 
                 code = "";
@@ -111,7 +122,7 @@ namespace Codeterpret.Implementations.BackEnd
                 }
                 //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
                 ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[1].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = GenerateInterfaceClass(projectName, "IDataService", code) });
+                ret[0].Items[1].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateInterfaceClass(projectName, "IDataService", code)) : CSharpPalette.RenderWithNoColor(GenerateInterfaceClass(projectName, "IDataService", code))});
 
 
                 code = "";
@@ -120,7 +131,7 @@ namespace Codeterpret.Implementations.BackEnd
                 for (int x = 0; x < models.Count; x++)
                 {
                     if (tables[x].IncludeThisTable)
-                        ret[0].Items[2].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = models[x] });
+                        ret[0].Items[2].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(models[x]) : CSharpPalette.RenderWithNoColor(models[x])});
                 }
 
 
@@ -132,24 +143,24 @@ namespace Codeterpret.Implementations.BackEnd
                 }
 
                 ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = GenerateServiceClass(projectName, "DataService", "IDataService", code) });
+                ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateServiceClass(projectName, "DataService", "IDataService", code)) : CSharpPalette.RenderWithNoColor(GenerateServiceClass(projectName, "DataService", "IDataService", code)) });
 
                
                 // --- MISC PROJECT FILES ---------------
-                ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = GenerateProjectCSPROJ() });
-                ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = GenerateProgramCS(projectName) });
+                ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? NoPalette.RenderWithColor(GenerateProjectCSPROJ()) : NoPalette.RenderWithNoColor(GenerateProjectCSPROJ()) });
+                ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateProgramCS(projectName)) : CSharpPalette.RenderWithNoColor(GenerateProgramCS(projectName)) });
 
                 Dictionary<string, string> IandS = new Dictionary<string, string>();
                 IandS.Add("IDataService", "DataService");
-                ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = GenerateStartupCS(projectName, IandS) });
-                ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = GenerateDockerFile(projectName) });
-                ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = GenerateREADME(projectName, tables) });
+                ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateStartupCS(projectName, IandS)) : CSharpPalette.RenderWithNoColor(GenerateStartupCS(projectName, IandS)) });
+                ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? NoPalette.RenderWithColor(GenerateDockerFile(projectName)) : NoPalette.RenderWithNoColor(GenerateDockerFile(projectName)) });
+                ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? NoPalette.RenderWithColor(GenerateREADME(projectName, tables)) : NoPalette.RenderWithNoColor(GenerateREADME(projectName, tables)) });
 
             }
             else // If we want each table represented in its own Service and Controller
             {
-                interfaceMethods = GenerateServiceMethods(tables, fromDBType, "", true, true);
-                serviceMethods = GenerateServiceMethods(tables, fromDBType, orm, true, false);
+                interfaceMethods = GenerateServiceMethods(tables, fromDBType, ORM, true, true);
+                serviceMethods = GenerateServiceMethods(tables, fromDBType, ORM, true, false);
                 controllerMethods = GenerateControllerMethods(tables, fromDBType, "", "", "", true);
 
                 Dictionary<string, string> injections = new Dictionary<string, string>();
@@ -321,11 +332,8 @@ namespace Codeterpret.Implementations.BackEnd
                                         }
                                     }
                                 }
-
                             }
-                        }                        
-
-                        
+                        }
                     }
                 }
             }
@@ -376,16 +384,7 @@ namespace Codeterpret.Implementations.BackEnd
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="tables"></param>
-        /// <param name="fromDBType"></param>
-        /// <param name="ORM"></param>
-        /// <param name="groupByTable"></param>
-        /// <param name="AsInterface"></param>
-        /// <returns></returns>
-        public override List<string> GenerateServiceMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string ORM, bool groupByTable = false, bool AsInterface = false)
+        private List<string> GenerateServiceMethods(List<SQLTable> tables, DatabaseTypes fromDBType, ORMTypes ORM, bool groupByTable = false, bool AsInterface = false)
         {
             List<string> methods = new List<string>();
             foreach (SQLTable t in tables)
@@ -411,7 +410,7 @@ namespace Codeterpret.Implementations.BackEnd
             return methods;           
         }
 
-        public override List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, string controllerName, string interfaceName, bool groupByTable = false)
+        private List<string> GenerateControllerMethods(List<SQLTable> tables, DatabaseTypes fromDBType, string serviceName, string controllerName, string interfaceName, bool groupByTable = false)
         {
             List<string> methods = new List<string>();
             string sn = "";
@@ -460,7 +459,7 @@ namespace Codeterpret.Implementations.BackEnd
             return methods;
         }
 
-        public override List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false)
+        private List<string> GenerateModels(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, GenerateSettings settings = null, bool IncludeRelevantImports = false)
         {
             List<string> models = new List<string>();
             foreach(SQLTable t in tables)
@@ -480,7 +479,7 @@ namespace Codeterpret.Implementations.BackEnd
         /// <param name="paramNames"></param>
         /// <param name="returns"></param>
         /// <returns></returns>
-        private string metaComment(string summary, List<string> paramNames, string returns)
+        private string MetaComment(string summary, List<string> paramNames, string returns)
         {
             string ret = $"\t\t/// <summary>\n\t\t/// {summary}\n\t\t/// </summary>\n";
             foreach (string pn in paramNames)
@@ -488,13 +487,14 @@ namespace Codeterpret.Implementations.BackEnd
                 ret += $"\t\t/// <param name=\"{pn}\"></param>\n";
             }
             ret += $"\t\t/// <returns>{returns}</returns>\n";
-
-            return ret;
+            
+            return CSharpPalette.Color(ret, CodeColoring.ColorTypes.Comment);
         }
 
 
-        private string GenerateServiceMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string ORM, bool asInterface = false)
-        {
+        private string GenerateServiceMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, ORMTypes ORM, bool asInterface = false)
+        {           
+
             string method = "";
 
             string methodName = "";
@@ -524,14 +524,17 @@ namespace Codeterpret.Implementations.BackEnd
                     }
 
                     by += c.Name;
-                    byParams += $"{c.CSharpType(fromDBType)} {c.Name}";
+
+                    // i.e. string FirstName
+                    byParams += $"{CSharpPalette.Color(c.CSharpType(fromDBType), CodeColoring.ColorTypes.PrimitiveType)} {CSharpPalette.Color(c.Name, CodeColoring.ColorTypes.Parameter)}";
                     paramNamesA.Add(c.Name);
                 }
                 else
                 {
                     if (Params != "") Params += ", ";
 
-                    Params += $"{c.CSharpType(fromDBType)} {c.Name}";
+                    // i.e. int UserId
+                    Params += $"{CSharpPalette.Color(c.CSharpType(fromDBType), CodeColoring.ColorTypes.PrimitiveType)} {CSharpPalette.Color(c.Name, CodeColoring.ColorTypes.Parameter)}";
                     paramNamesB.Add(c.Name);
                 }
             }
@@ -539,19 +542,19 @@ namespace Codeterpret.Implementations.BackEnd
             switch (crudType)
             {
                 case CRUDTypes.Create:
-                    methodName = $"{(asInterface ? metaComment("Adds a " + table.Name + " record", paramNamesB, table.Name) : "")}\t\t{accessible} Task<{table.Name}> Add{table.Name}({Params}){methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Adds a " + table.Name + " record", paramNamesB, table.Name) : "")}\t\t{MethodDefinition(accessible, "Task<" + table.Name + ">", "Add" + table.Name, Params)}{methodEnd}";
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Read:
-                    methodName = $"{(asInterface ? metaComment("Gets a " + table.Name + " record", paramNamesA, table.Name) : "")}\t\t{accessible} Task<{table.Name}> Get{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Gets a " + table.Name + " record", paramNamesA, table.Name) : "")}\t\t{MethodDefinition(accessible, "Task<" + table.Name + ">", "Get" + table.Name + by, byParams)}{methodEnd}";
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Update:
-                    methodName = $"{(asInterface ? metaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}\t\t{accessible} Task<bool> Update{table.Name}({table.Name} entity){methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}\t\t{MethodDefinition(accessible, "Task<bool>", "Update" + table.Name, table.Name + " entity")}{methodEnd}";
                     returnType = "bool";
                     break;
                 case CRUDTypes.Delete:
-                    methodName = $"{(asInterface ? metaComment("Deletes a " + table.Name + " record", paramNamesA, "bool representing success") : "")}\t\t{accessible} Task<bool> Delete{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Deletes a " + table.Name + " record", paramNamesA, "bool representing success") : "")}\t\t{MethodDefinition(accessible, "Task<bool>", "Delete" + table.Name + by, byParams)}{methodEnd}";
                     returnType = "bool";
                     break;
             }
@@ -561,17 +564,43 @@ namespace Codeterpret.Implementations.BackEnd
                 return methodName;
             }
 
-            switch (ORM.Trim().ToLower())
+            switch (ORM)
             {
-                case "dapper":
+                case ORMTypes.Dapper:
                     method = $"{methodName}\n\t\t{{\n\t\t\t{returnType} entity = {(returnType == "bool" ? "false" : "null" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\treturn entity;\n\t\t}}";
                     break;
-                case "ado":
+                case ORMTypes.ADO:
                     method = $"{methodName}\n\t\t{{\n{GenerateADOMethodBody(table, fromDBType, crudType)}\n}}";
                     break;
             }
 
             return method.ToString();
+        }
+
+        private string MethodDefinition(string accessibility, string returnType, string methodName, string parameters)
+        {
+
+            return $"{CSharpPalette.Color(accessibility, CodeColoring.ColorTypes.PrimitiveType)} {ColorTheType(returnType)} {CSharpPalette.Color(methodName, CodeColoring.ColorTypes.MethodCall)}({parameters})";
+        }
+
+        private string ColorTheType(string type)
+        {            
+
+            string[] primitiveTypes = "bool,byte,sbyte,char,decimal,double,float,int,uint,long,ulong,short,ushort,object,string,dynamic".Split(',');
+            if (primitiveTypes.Contains(type))
+            {
+                return CSharpPalette.Color(type, CodeColoring.ColorTypes.PrimitiveType);
+            }
+            else
+            {
+                type = type.Replace("<", "~!").Replace(">", "~@");
+                // Makes the < and > in a type (i.e. List<int>) the default color
+                string code = type.Replace("~!", CSharpPalette.Color("~!", CodeColoring.ColorTypes.Default)).Replace("~@", CSharpPalette.Color("~@", CodeColoring.ColorTypes.Default));
+                code = code.Replace("~!", "<").Replace("~@", ">");
+                code = CSharpPalette.Color(code, CodeColoring.ColorTypes.Type);
+                
+                return code;
+            }
         }
 
         private string GenerateControllerMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string serviceName, string controllerName, string interfaceName)
@@ -813,7 +842,7 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateADOMethodBody(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType)
         {
-            string body = "";
+            string body = "\t\t\tDoes anyone still actually want this???";
 
             return body;
         }
