@@ -36,8 +36,12 @@ namespace Codeterpret.Common
             Parameter,
             Property,
             String,
-            Comment
+            Comment,
+            Accessibility
         }
+
+        public static string LessThanAlternate = "^&^";
+        public static string GreateThanAlternate = "^*^";
 
         private Dictionary<ColorTypes, string> ColorCodes { get; set; }
 
@@ -66,6 +70,7 @@ namespace Codeterpret.Common
                     ColorCodes.Add(ColorTypes.Parameter, "#1e1e1e");
                     ColorCodes.Add(ColorTypes.Property, "#1e1e1e");
                     ColorCodes.Add(ColorTypes.String, "#1e1e1e");
+                    ColorCodes.Add(ColorTypes.Accessibility, "#1e1e1e");
                     break;
 
                 case ColorPalettes.CSharp:
@@ -86,6 +91,7 @@ namespace Codeterpret.Common
                     ColorCodes.Add(ColorTypes.Property, "#dcdcdc");
                     ColorCodes.Add(ColorTypes.String, "#d69d85");
                     ColorCodes.Add(ColorTypes.Comment, "#608b4e");
+                    ColorCodes.Add(ColorTypes.Accessibility, "#559ad3");
                     break;
             }
         }
@@ -118,7 +124,7 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string RenderWithColor(string text)
         {
-            return $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@", "")}</span></pre>";
+            return $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@", "")}</span></pre>".Replace(CodeColoring.GreateThanAlternate, ">").Replace(CodeColoring.LessThanAlternate, "<");
         }
 
         /// <summary>
@@ -147,6 +153,8 @@ namespace Codeterpret.Common
                     }
                 }
             }
+
+            text = text.Replace(CodeColoring.GreateThanAlternate, ">").Replace(CodeColoring.LessThanAlternate, "<");
 
             return text;
         }

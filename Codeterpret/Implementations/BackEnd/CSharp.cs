@@ -22,12 +22,45 @@ namespace Codeterpret.Implementations.BackEnd
             ADO
         }
 
-        private const string controllerTryCatchBlock = "try\n\t\t{\n\t\t\t<CODE>\n\t\t}\n\t\tcatch\n\t\t{\n\t\t\treturn StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}";
-        private const string controllerOkOrBadRequest = "<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn Ok(\"<RETURN>\");\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
-        private const string controllerNoContentBadRequest = "if (<CONDITION>)\n\t\t\t{\n\t\t\t\treturn StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\treturn BadRequest(\"<MESSAGE>\");\n\t\t\t}";
+        private string controllerTryCatchBlock = "";
+        private string controllerOkOrBadRequest = "";
+        private string controllerNoContentBadRequest = "";
 
         private CodeColoring CSharpPalette = new CodeColoring(CodeColoring.ColorPalettes.CSharp);
         private CodeColoring NoPalette = new CodeColoring(CodeColoring.ColorPalettes.None);
+        private string usingString;
+        private string publicAsync;
+        private string taskIActionResult;
+        private string returnStr;
+        private string ifStr;
+        private string elseStr;
+        private string tryStr;
+        private string catchStr;
+        private string publicClass;
+        private string namespaceStr;
+
+        public CSharp()
+        {
+            PropertyDefinitionsShouldNotContain = "enum,struct,event,const";
+
+            returnStr = CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow);
+            ifStr = CSharpPalette.Color("if", CodeColoring.ColorTypes.Flow);
+            elseStr = CSharpPalette.Color("else", CodeColoring.ColorTypes.Flow);
+            tryStr = CSharpPalette.Color("try", CodeColoring.ColorTypes.Flow);
+            catchStr = CSharpPalette.Color("catch", CodeColoring.ColorTypes.Flow);            
+
+            controllerTryCatchBlock = $"{tryStr}\n\t\t{{\n\t\t\t<CODE>\n\t\t}}\n\t\t{catchStr}\n\t\t{{\n\t\t\t{returnStr} StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}}";
+            controllerOkOrBadRequest = $"<CALL>\n\t\t\tif (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} Ok(<RETURN>);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} BadRequest(\"<MESSAGE>\");\n\t\t\t}}";
+            controllerNoContentBadRequest = $"{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} BadRequest(\"<MESSAGE>\");\n\t\t\t}}";
+
+            usingString = CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType);
+            publicAsync = CSharpPalette.Color("public async", CodeColoring.ColorTypes.PrimitiveType);
+            taskIActionResult = CSharpPalette.Color(CSharpPalette.Color("Task", CodeColoring.ColorTypes.Type) + CodeColoring.LessThanAlternate + CSharpPalette.Color("IActionResult", CodeColoring.ColorTypes.InterfaceName) + CodeColoring.GreateThanAlternate, CodeColoring.ColorTypes.Default);
+            publicClass = CSharpPalette.Color("public class", CodeColoring.ColorTypes.PrimitiveType);
+            namespaceStr = CSharpPalette.Color("namespace", CodeColoring.ColorTypes.PrimitiveType);
+
+        }
+
 
         /// <summary>
         /// Settings that will be rendered on the Project Builder to obtain user input needed to code generation
@@ -73,10 +106,6 @@ namespace Codeterpret.Implementations.BackEnd
             }
         }
        
-        public CSharp()
-        {
-            PropertyDefinitionsShouldNotContain = "enum,struct,event,const";            
-        }
 
         
         public override IEnumerable<ProjectItem> GenerateProject(List<SQLTable> tables, DatabaseTypes fromDBType, string projectName, SettingGroup group, FileOutputTypes outputType)
@@ -491,6 +520,15 @@ namespace Codeterpret.Implementations.BackEnd
             return CSharpPalette.Color(ret, CodeColoring.ColorTypes.Comment);
         }
 
+        private string RouteAttribute(string httpType, string route)
+        {
+            return $"[{CSharpPalette.Color(httpType, CodeColoring.ColorTypes.ClassName)}(" + CSharpPalette.Color("\"" + route + "\"", CodeColoring.ColorTypes.String) + ")]";
+        }
+
+        private string ServiceName(string name, bool startWithUnderscore = true)
+        {
+            return CSharpPalette.Color((startWithUnderscore ? "_" : "") + name, CodeColoring.ColorTypes.Parameter); 
+        }
 
         private string GenerateServiceMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, ORMTypes ORM, bool asInterface = false)
         {           
@@ -501,7 +539,7 @@ namespace Codeterpret.Implementations.BackEnd
             string by = "";
             string byParams = "";
             string Params = "";
-            string accessible = !asInterface ? "public async" : "";
+            string accessible = !asInterface ? publicAsync : "";
             string methodEnd = !asInterface ? "" : ";";
             string returnType = "";
 
@@ -567,7 +605,7 @@ namespace Codeterpret.Implementations.BackEnd
             switch (ORM)
             {
                 case ORMTypes.Dapper:
-                    method = $"{methodName}\n\t\t{{\n\t\t\t{returnType} entity = {(returnType == "bool" ? "false" : "null" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\treturn entity;\n\t\t}}";
+                    method = $"{methodName}\n\t\t{{\n\t\t\t{ColorTheType(returnType)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)} = {(returnType == "bool" ? "false" : "null" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\t{CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)};\n\t\t}}";
                     break;
                 case ORMTypes.ADO:
                     method = $"{methodName}\n\t\t{{\n{GenerateADOMethodBody(table, fromDBType, crudType)}\n}}";
@@ -616,17 +654,22 @@ namespace Codeterpret.Implementations.BackEnd
             string call = "";
             string Route = "";
             string byRoute = "";
-            string accessible = "public async Task<IActionResult>";
+            string accessible = $"{publicAsync} {taskIActionResult}"; //$"public async {CSharpPalette.Color("Task", CodeColoring.ColorTypes.ClassName)}{CodeColoring.LessThanAlternate}{CSharpPalette.Color("IActionResult", CodeColoring.ColorTypes.InterfaceName)}{CodeColoring.GreateThanAlternate}";
             string methodEnd = "";
+
+            string retStr = CSharpPalette.Color("ret", CodeColoring.ColorTypes.Parameter);
+            string varRet = CSharpPalette.Color("var", CodeColoring.ColorTypes.PrimitiveType) + " " + retStr;
+            string awaitStr = CSharpPalette.Color("await", CodeColoring.ColorTypes.PrimitiveType);
+            
 
             if (crudType == CRUDTypes.Constructor)
             {
                 
-                return $"       {interfaceName}  _{serviceName};\n"
+                return $"       {CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)}  _{serviceName};\n"
                                  + "\n"
                                  + $"    public {controllerName}({interfaceName} {serviceName})\n"
                                  + "    {\n"
-                                 + $"        _{serviceName} = {serviceName};\n"
+                                 + $"        {ServiceName(serviceName)} = {serviceName};\n"
                                  + "    }";
                 
             }
@@ -673,35 +716,35 @@ namespace Codeterpret.Implementations.BackEnd
                                  + "\n"
                                  + $"    public {controllerName}(I{serviceName} {serviceName})\n"
                                  + "    {\n"
-                                 + $"        _{serviceName} = {serviceName};\n"
+                                 + $"        {ServiceName(serviceName)} = {serviceName};\n"
                                  + "    }";
                     break;
                 case CRUDTypes.Create:
-                    methodName = $"[HttpPost(\"{table.Name}/{Route}\")]\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
+                    methodName = RouteAttribute("HttpPost", $"{table.Name}/{Route}") + "\n\t" + MethodDefinition(accessible, "", "Add" + table.Name, Params) + methodEnd; // + $"\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
                     methodNameCall = $"Add{table.Name}";
                     call = ParamsCall;
-                    method = $"\t{methodName}\n\t{{\n\t\tvar ret = await _{serviceName}.{methodNameCall}({call});\n\t\treturn Ok(ret);\n\t}}";
+                    method = $"\t{methodName}\n\t{{\n\t\t{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});\n\t\treturn Ok({retStr});\n\t}}";
                     break;
                 case CRUDTypes.Read:
                     methodName = $"[HttpGet(\"{table.Name}/{byRoute}\")]\n\t{accessible} Get{table.Name}{by}({byParams}){methodEnd}";
                     methodNameCall = $"Read{table.Name}{by}";
                     call = byParamsCall;
-                    callToService = $"var ret = await _{serviceName}.{methodNameCall}({call});";
-                    condition = $"ret != null";
+                    callToService = $"{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});";
+                    condition = $"{retStr} != null";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerOkOrBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Found")).Replace("<RETURN>", "ret").Replace("<CALL>", callToService)}\n\t}}";
                     break;
                 case CRUDTypes.Update:
                     methodName = $"[HttpPut(\"{table.Name}/{Route}\")]\n\t{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
                     methodNameCall = $"Update{table.Name}";
                     call = ParamsCall;
-                    condition = $"await _{serviceName}.{methodNameCall}({call})";
+                    condition = $"{awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call})";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Updated"))}\n\t}}";
                     break;
                 case CRUDTypes.Delete:
                     methodName = $"[HttpDelete(\"{table.Name}/{byRoute}\")]\n\t{accessible} Delete{table.Name}{by}({byParams}){methodEnd}";
                     methodNameCall = $"Delete{table.Name}{by}";
                     call = byParamsCall;
-                    condition = $"await _{serviceName}.{methodNameCall}({call})";
+                    condition = $"{awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call})";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", table.Name + " Not Deleted"))}\n\t}}";
                     break;
             }
@@ -750,8 +793,10 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateDapperMethodBody(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType)
         {
+            string newStr = CSharpPalette.Color("new", CodeColoring.ColorTypes.PrimitiveType);
+
             string con = GetConnectionType(fromDBType);
-            string body = $"\t\t\tusing ({con} conn = new {con}(_connectionString))\n\t\t\t{{\n\t\t\t\t";
+            string body = $"\t\t\t{CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType)} ({ColorTheType(con)} conn = {newStr} {ColorTheType(con)}(_connectionString))\n\t\t\t{{\n\t\t\t\t";
 
             List<string> columns = new List<string>();
             List<string> variables = new List<string>();
@@ -810,27 +855,33 @@ namespace Codeterpret.Implementations.BackEnd
                 }
             }
 
+            string stringSql = CSharpPalette.Color("string", CodeColoring.ColorTypes.PrimitiveType) + " " + CSharpPalette.Color("sql", CodeColoring.ColorTypes.Parameter);
+            string entity = CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter);
+            string awaitStr = CSharpPalette.Color("await", CodeColoring.ColorTypes.PrimitiveType);
+            
+            string sqlStr = CSharpPalette.Color("new", CodeColoring.ColorTypes.Parameter);
+
             switch (crudType)
             {
                 case CRUDTypes.Create:
-                    returnObj = table.Name; 
-                    sql = $"string sql = \"INSERT {table.Name} ({columns.ToCommaList()}) VALUES ({variables.ToCommaList()})\";";
-                    execute = $"entity = await conn.ExecuteAsync(sql, new {{{ovariables.ToCommaList()}}});";
+                    returnObj = ColorTheType(table.Name); 
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"INSERT {table.Name} ({columns.ToCommaList()}) VALUES ({variables.ToCommaList()})\"", CodeColoring.ColorTypes.String) + ";";
+                    execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
                 case CRUDTypes.Read:
-                    returnObj = table.Name;
-                    sql = $"string sql = \"SELECT {columns.ToCommaList()} FROM {table.Name} WHERE {where.ToCommaList()}\";";
-                    execute = $"entity = await conn.QuerySingleAsync<{returnObj}>(sql, new {{{ovariables.ToCommaList()}}});";
+                    returnObj = ColorTheType(table.Name);
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"SELECT {columns.ToCommaList()} FROM {table.Name} WHERE {where.ToCommaList()}\"", CodeColoring.ColorTypes.String) + ";";
+                    execute = $"{entity} = {awaitStr} conn.QuerySingleAsync<{returnObj}>({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
                 case CRUDTypes.Update:
-                    returnObj = $"bool";
-                    sql = $"string sql = \"UPDATE {table.Name} SET {columns.ToCommaList()} WHERE {where.ToCommaList()}\";";
-                    execute = $"entity = await conn.ExecuteAsync(sql, new {{{ovariables.ToCommaList()}}});";
+                    returnObj = ColorTheType("bool");
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"UPDATE {table.Name} SET {columns.ToCommaList()} WHERE {where.ToCommaList()}\"", CodeColoring.ColorTypes.String) + ";";
+                    execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
                 case CRUDTypes.Delete:
-                    returnObj = $"bool";
-                    sql = $"string sql = \"DELETE {table.Name} WHERE {where.ToCommaList()}\";";
-                    execute = $"entity = await conn.ExecuteAsync(sql, new {{{ovariables.ToCommaList()}}});";
+                    returnObj = ColorTheType("bool");
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"DELETE {table.Name} WHERE {where.ToCommaList()}\"", CodeColoring.ColorTypes.String) + ";";
+                    execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
             }
 
@@ -862,7 +913,7 @@ namespace Codeterpret.Implementations.BackEnd
             StringBuilder sbConstructorAssignments = new StringBuilder();
 
             if (settings.IncludeSerializeDecorator) sbMainClassBlock.AppendLine("[Serializable]");
-            sbMainClassBlock.AppendLine($"public class {table.Name}\n{{");
+            sbMainClassBlock.AppendLine($"{publicClass} {table.Name}\n{{");
             props = "{ get; set; }";
             emptyConstructor = $"\n\tpublic {table.Name}() {{}}\n";
             fullConstructor = $"\n\tpublic {table.Name}([[PARAMETERS]])\n\t{{\n[[ASSIGNMENTS]]\t}}";
@@ -884,7 +935,7 @@ namespace Codeterpret.Implementations.BackEnd
 
             sbMainClassBlock.AppendLine(sbClassProperties.ToString() + ec + fc + "}");
 
-            string ret = $"namespace {projectName}.Models\n{{\n{sbMainClassBlock.ToString().Indent('\t', 1)}\n}}";
+            string ret = $"{namespaceStr} {projectName}.Models\n{{\n{sbMainClassBlock.ToString().Indent('\t', 1)}\n}}";
 
             //if (settings.Namespace != "")
             // {
@@ -898,20 +949,20 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateControllerClass(string projectName, string controllerName, string route, string code)
         {
-            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Net;\nusing System.Linq;\nusing System.Threading.Tasks;\nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\nusing {projectName}.Interfaces;\nusing {projectName}.Services;\nusing {projectName}.Models;\n\nnamespace {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    public class {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
+            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Net;\nusing System.Linq;\nusing System.Threading.Tasks;\nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\nusing {projectName}.Interfaces;\nusing {projectName}.Services;\nusing {projectName}.Models;\n\n{namespaceStr} {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    {publicClass} {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
 
             return ret;
         }
 
         private string GenerateInterfaceClass(string projectName, string interfaceName, string code)
         {
-            string ret = "using System;\n"
-                         + "using System.Collections.Generic;\n"
-                         + "using System.Linq;\n"
-                         + "using System.Threading.Tasks;\n"
-                         + $"using {projectName}.Models;\n"
+            string ret = $"{usingString} System;\n"
+                         + $"{usingString} System.Collections.Generic;\n"
+                         + $"{usingString} System.Linq;\n"
+                         + $"{usingString} System.Threading.Tasks;\n"
+                         + $"{usingString} {projectName}.Models;\n"
                          + "\n"
-                         + $"namespace {projectName}.Interfaces\n"
+                         + $"{namespaceStr} {projectName}.Interfaces\n"
                          + "{\n"
                          + $"    public interface {interfaceName}\n"
                          + "    {\n"
@@ -925,17 +976,17 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateServiceClass(string projectName, string serviceName, string interfaceName, string code)
         {
-            string ret = "using System;\n"
-                         + "using System.Collections.Generic;\n"
-                         + "using System.Linq;\n"
-                         + "using System.Threading.Tasks;\n"
-                         + "using System.Data.SqlClient;\n"
-                         + "using Dapper;\n"
-                         + $"using {projectName}.Models;\n"
+            string ret = $"{usingString} System;\n"
+                         + $"{usingString} System.Collections.Generic;\n"
+                         + $"{usingString} System.Linq;\n"
+                         + $"{usingString} System.Threading.Tasks;\n"
+                         + $"{usingString} System.Data.SqlClient;\n"
+                         + $"{usingString} Dapper;\n"
+                         + $"{usingString} {projectName}.Models;\n"
                          + "\n"
-                         + $"namespace {projectName}.Services\n"
+                         + $"{namespaceStr} {projectName}.Services\n"
                          + "{\n"
-                         + $"    public class {serviceName} : {interfaceName}\n"
+                         + $"    {publicClass} {serviceName} : {interfaceName}\n"
                          + "    {\n"
                          + "        private string _connectionString;\n\n"
                          + $"{code.Indent('\t', 1)}"
@@ -948,20 +999,20 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateStartupClassFile(string baseNamespace, string className, Dictionary<string, string> injectServices, DatabaseTypes fromDBType)
         {
-            string ret = "using System;\n" +                         
-                         "using System.Collections.Generic;\n" +
-                         "using System.Linq;\n" +
-                         "using System.Threading.Tasks;\n" +
-                         "using Microsoft.AspNetCore.Builder;\n" +
-                         "using Microsoft.AspNetCore.Hosting;\n" +
-                         "using Microsoft.AspNetCore.HttpsPolicy;\n" +
-                         "using Microsoft.AspNetCore.Mvc;\n" +
-                         "using Microsoft.Extensions.Configuration;\n" +
-                         "using Microsoft.Extensions.DependencyInjection;\n" +
-                         "using Microsoft.Extensions.Hosting;\n" +
-                         "using Microsoft.Extensions.Logging;\n" +
-                        $"using {baseNamespace}.Interfaces;\n" +
-                        $"using {baseNamespace}.Services;\n\n";
+            string ret = $"{usingString} System;\n" +                         
+                         $"{usingString} System.Collections.Generic;\n" +
+                         $"{usingString} System.Linq;\n" +
+                         $"{usingString} System.Threading.Tasks;\n" +
+                         $"{usingString} Microsoft.AspNetCore.Builder;\n" +
+                         $"{usingString} Microsoft.AspNetCore.Hosting;\n" +
+                         $"{usingString} Microsoft.AspNetCore.HttpsPolicy;\n" +
+                         $"{usingString} Microsoft.AspNetCore.Mvc;\n" +
+                         $"{usingString} Microsoft.Extensions.Configuration;\n" +
+                         $"{usingString} Microsoft.Extensions.DependencyInjection;\n" +
+                         $"{usingString} Microsoft.Extensions.Hosting;\n" +
+                         $"{usingString} Microsoft.Extensions.Logging;\n" +
+                        $"{usingString} {baseNamespace}.Interfaces;\n" +
+                        $"{usingString} {baseNamespace}.Services;\n\n";
 
             string injects = "";
             foreach(var i in injectServices)
@@ -969,7 +1020,7 @@ namespace Codeterpret.Implementations.BackEnd
                 injects += $"\t\t\tservices.AddSingleton<{i.Key}, {i.Value}>();\n";
             }
 
-            ret += $"namespace {baseNamespace}\n{{\n\tpublic class Startup\n\t{{\n\t\tpublic Startup(IConfiguration configuration)\n\t\t{{\n\t\t\tConfiguration = configuration;\n\t\t}}\n\n\t\tpublic IConfiguration Configuration {{ get; }}\n\n\t\tpublic void ConfigureServices(IServiceCollection services)\n\t\t{{\n\t\t\tservices.AddControllers();\n\n{injects}\n\t\t}}\n\n";
+            ret += $"{namespaceStr} {baseNamespace}\n{{\n\t{publicClass} Startup\n\t{{\n\t\tpublic Startup(IConfiguration configuration)\n\t\t{{\n\t\t\tConfiguration = configuration;\n\t\t}}\n\n\t\tpublic IConfiguration Configuration {{ get; }}\n\n\t\tpublic void ConfigureServices(IServiceCollection services)\n\t\t{{\n\t\t\tservices.AddControllers();\n\n{injects}\n\t\t}}\n\n";
 
             ret += $"\t\tpublic void Configure(IApplicationBuilder app, IWebHostEnvironment env)\n\t\t{{\n\t\t\tif (env.IsDevelopment())\n\t\t\t{{\n\t\t\t\tapp.UseDeveloperExceptionPage();\n\t\t\t}}\n\t\t\tapp.UseHttpsRedirection();\n\t\t\tapp.UseRouting();\n\t\t\tapp.UseAuthorization();\n\t\t\tapp.UseEndpoints(endpoints =>\n\t\t\t{{\n\t\t\t\tendpoints.MapControllers();\n\t\t\t}});\n\t\t}}\n";
 
@@ -980,9 +1031,9 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateInterfaceClassFile(string methodCode, string baseNamespace, string className)
         {
-            string specialRefs = $"using {baseNamespace}.Models;\n";
+            string specialRefs = $"{usingString} {baseNamespace}.Models;\n";
 
-            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Threading.Tasks;\n{specialRefs}\n\nnamespace {baseNamespace}.Interfaces\n{{\n\tpublic interface I{className}\n\t{{\n";
+            string ret = $"{usingString} System;\n{usingString} System.Collections.Generic;\n{usingString} System.Threading.Tasks;\n{specialRefs}\n\nnamespaceStr {baseNamespace}.Interfaces\n{{\n\tpublic interface I{className}\n\t{{\n";
                                     
             ret += $"{Indent(methodCode, 1)}\n\t}}\n\n}}";
 
@@ -998,28 +1049,28 @@ namespace Codeterpret.Implementations.BackEnd
             switch (fromDBType)
             {
                 case DatabaseTypes.MySQL:
-                    specialRefs = "using MySql.Data.MySqlClient;\n";
+                    specialRefs = $"{usingString} MySql.Data.MySqlClient;\n";
                     break;
                 case DatabaseTypes.SQLServer:
-                    specialRefs = "using System.Data.SqlClient;\n";
+                    specialRefs = $"{usingString} System.Data.SqlClient;\n";
                     break;
             }
 
             switch (orm.Trim().ToLower())
             {
                 case "dapper":
-                    specialRefs += "using Dapper;\n";
+                    specialRefs += $"{usingString} Dapper;\n";
                     break;
             }
 
-            specialRefs += $"using {baseNamespace}.Interfaces;\nusing {baseNamespace}.Models;\n";
+            specialRefs += $"{usingString} {baseNamespace}.Interfaces;\n{usingString} {baseNamespace}.Models;\n";
 
-            string ret = $"using System;\n" +
-                $"using System.Collections.Generic;\n" +
-                $"using System.Threading.Tasks;\n" +
+            string ret = $"{usingString} System;\n" +
+                $"{usingString} System.Collections.Generic;\n" +
+                $"{usingString} System.Threading.Tasks;\n" +
                 $"{specialRefs}\n\n" +
-                $"namespace {baseNamespace}.Services\n" +
-                $"{{\n\tpublic class {className}Service\n\t{{\n";
+                $"{namespaceStr} {baseNamespace}.Services\n" +
+                $"{{\n\t{publicClass} {className}Service\n\t{{\n";
 
             ret += "\t\tprivate readonly string _connectionString;\n";
             foreach(var i in injectServices)
@@ -1041,15 +1092,15 @@ namespace Codeterpret.Implementations.BackEnd
         {
             List<string> Params = new List<string>();
             string Assignments = "";
-            string specialRefs = $"using {baseNamespace}.Services;\nusing {baseNamespace}.Models;\n";
+            string specialRefs = $"{usingString} {baseNamespace}.Services;\n{usingString} {baseNamespace}.Models;\n";
 
-            string ret = $"using System;\n" +
-                $"using System.Collections.Generic;\n" +
-                $"using System.Threading.Tasks;\n" +
-                $"using Microsoft.AspNetCore.Mvc;\n" +
+            string ret = $"{usingString} System;\n" +
+                $"{usingString} System.Collections.Generic;\n" +
+                $"{usingString} System.Threading.Tasks;\n" +
+                $"{usingString} Microsoft.AspNetCore.Mvc;\n" +
                 $"{specialRefs}\n\n" +
-                $"namespace {baseNamespace}.Controllers : Controller\n" +
-                $"{{\n\tpublic class {className}Controller\n\t{{\n";
+                $"{namespaceStr} {baseNamespace}.Controllers : Controller\n" +
+                $"{{\n\t{publicClass} {className}Controller\n\t{{\n";
 
             foreach (var i in injectServices)
             {
@@ -1091,18 +1142,18 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateProgramCS(string projectName)
         {
-            string code = "using System;\n"
-                 + "using System.Collections.Generic;\n"
-                 + "using System.Linq;\n"
-                 + "using System.Threading.Tasks;\n"
-                 + "using Microsoft.AspNetCore.Hosting;\n"
-                 + "using Microsoft.Extensions.Configuration;\n"
-                 + "using Microsoft.Extensions.Hosting;\n"
-                 + "using Microsoft.Extensions.Logging;\n"
+            string code = $"{usingString} System;\n"
+                 + $"{usingString} System.Collections.Generic;\n"
+                 + $"{usingString} System.Linq;\n"
+                 + $"{usingString} System.Threading.Tasks;\n"
+                 + $"{usingString} Microsoft.AspNetCore.Hosting;\n"
+                 + $"{usingString} Microsoft.Extensions.Configuration;\n"
+                 + $"{usingString} Microsoft.Extensions.Hosting;\n"
+                 + $"{usingString} Microsoft.Extensions.Logging;\n"
                  + "\n\n"
-                 + $"namespace {projectName}\n"
+                 + $"{namespaceStr} {projectName}\n"
                  + "{\n"
-                 + "    public class Program\n"
+                 + $"    {publicClass} Program\n"
                  + "    {\n"
                  + "        public static void Main(string[] args)\n"
                  + "        {\n"
@@ -1135,29 +1186,29 @@ namespace Codeterpret.Implementations.BackEnd
                  + "  </ItemGroup>\n\n"
                  + "</Project>";
 
-            return code;
+            return code.Replace("<", CodeColoring.LessThanAlternate).Replace(">", CodeColoring.GreateThanAlternate);
         }
 
         private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices)
         {
-            string code = "using System;\n"
-                         + "using System.Collections.Generic;\n"
-                         + "using System.Linq;\n"
-                         + "using System.Threading.Tasks;\n"
-                         + "using Microsoft.AspNetCore.Builder;\n"
-                         + "using Microsoft.AspNetCore.Hosting;\n"
-                         + "using Microsoft.AspNetCore.HttpsPolicy;\n"
-                         + "using Microsoft.AspNetCore.Mvc;\n"
-                         + "using Microsoft.Extensions.Configuration;\n"
-                         + "using Microsoft.Extensions.DependencyInjection;\n"
-                         + "using Microsoft.Extensions.Hosting;\n"
-                         + "using Microsoft.Extensions.Logging;\n"
-                         + $"using {projectName}.Interfaces;\n"
-                         + $"using {projectName}.Services;\n"
+            string code = $"{usingString} System;\n"
+                         + $"{usingString} System.Collections.Generic;\n"
+                         + $"{usingString} System.Linq;\n"
+                         + $"{usingString} System.Threading.Tasks;\n"
+                         + $"{usingString} Microsoft.AspNetCore.Builder;\n"
+                         + $"{usingString} Microsoft.AspNetCore.Hosting;\n"
+                         + $"{usingString} Microsoft.AspNetCore.HttpsPolicy;\n"
+                         + $"{usingString} Microsoft.AspNetCore.Mvc;\n"
+                         + $"{usingString} Microsoft.Extensions.Configuration;\n"
+                         + $"{usingString} Microsoft.Extensions.DependencyInjection;\n"
+                         + $"{usingString} Microsoft.Extensions.Hosting;\n"
+                         + $"{usingString} Microsoft.Extensions.Logging;\n"
+                         + $"{usingString} {projectName}.Interfaces;\n"
+                         + $"{usingString} {projectName}.Services;\n"
                          + "\n"
-                         + $"namespace {projectName}\n"
+                         + $"{namespaceStr} {projectName}\n"
                          + "{\n"
-                         + "    public class Startup\n"
+                         + $"    {publicClass} Startup\n"
                          + "    {\n"
                          + "        public Startup(IConfiguration configuration)\n"
                          + "        {\n"
@@ -1181,7 +1232,7 @@ namespace Codeterpret.Implementations.BackEnd
                          + "        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.\n"
                          + "        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)\n"
                          + "        {\n"
-                         + "            if (env.IsDevelopment())\n"
+                         + $"            {ifStr} (env.IsDevelopment())\n"
                          + "            {\n"
                          + "                app.UseDeveloperExceptionPage();\n"
                          + "            }\n"
@@ -1209,26 +1260,16 @@ namespace Codeterpret.Implementations.BackEnd
             // Based on: https://raw.githubusercontent.com/bbc/REST-API-example/master/README.md
 
             string code = "\n"
-                 + $"# {projectName}\n"
-                 + "\n"
-                 + "Replace this with a better description of the API\n"
-                 + "\n"
-                 + "## Install\n"
-                 + "\n"
-                 + "    [Replace with install command]\n"
-                 + "\n"
+                 + $"# {projectName}\n\n"
+                 + "Replace this with a better description of the API\n\n"
+                 + "## Install\n\n"
+                 + "    [Replace with install command]\n\n"
                  + "## Run the app\n"
-                 + "\n"
-                 + "    [Replace with run command]\n"
-                 + "\n"
-                 + "## Run the tests\n"
-                 + "\n"
-                 + "    [replace with command to run tests]\n"
-                 + "\n"
-                 + "# REST API\n"
-                 + "\n"
-                 + "The following describes the API.\n"
-                 + "\n";
+                 + "    [Replace with run command]\n\n"
+                 + "## Run the tests\n\n"
+                 + "    [replace with command to run tests]\n\n"
+                 + "# REST API\n\n"                 
+                 + "The following describes the API.\n\n";
 
             foreach (var s in sqlTables)
             {
@@ -1277,36 +1318,6 @@ namespace Codeterpret.Implementations.BackEnd
             return ret;
         }
 
-        private void CreateDir(string path)
-        {            
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-        }
-
-        private bool WriteFile(string fileName, string text, bool overwrite = true)
-        {
-            bool success = false;
-
-            try
-            {
-                if (File.Exists(fileName))
-                {
-                    if (overwrite)
-                        File.Delete(fileName);
-                    else
-                        return false;
-                }
-
-                File.WriteAllText(fileName, text);
-                success = true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }            
-
-            return success;
-        }
                
 
         private string CleanType(string originalType)
