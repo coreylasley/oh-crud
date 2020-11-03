@@ -52,9 +52,9 @@ namespace Codeterpret.Implementations.BackEnd
             tryStr = CSharpPalette.Color("try", CodeColoring.ColorTypes.Flow);
             catchStr = CSharpPalette.Color("catch", CodeColoring.ColorTypes.Flow);            
 
-            controllerTryCatchBlock = $"{tryStr}\n\t\t{{\n\t\t\t<CODE>\n\t\t}}\n\t\t{catchStr}\n\t\t{{\n\t\t\t{returnStr} StatusCode((int)HttpStatusCode.InternalServerError);\n\t\t}}";
-            controllerOkOrBadRequest = $"<CALL>\n\t\t\t{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} Ok(<RETURN>);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} BadRequest(\"<MESSAGE>\");\n\t\t\t}}";
-            controllerNoContentBadRequest = $"{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} StatusCode((int)HttpStatusCode.NoContent);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} BadRequest(\"<MESSAGE>\");\n\t\t\t}}";
+            controllerTryCatchBlock = $"{tryStr}\n\t\t{{\n\t\t\t<CODE>\n\t\t}}\n\t\t{catchStr}\n\t\t{{\n\t\t\t{returnStr} {MethodName("StatusCode")}(({ColorTheType("int")}){CSharpPalette.Color("HttpStatusCode", CodeColoring.ColorTypes.Enum)}.InternalServerError);\n\t\t}}";
+            controllerOkOrBadRequest = $"<CALL>\n\t\t\t{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("Ok")}(<RETURN>);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("BadRequest")}(\"<MESSAGE>\");\n\t\t\t}}";
+            controllerNoContentBadRequest = $"{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("StatusCode")}(({ColorTheType("int")}){CSharpPalette.Color("HttpStatusCode", CodeColoring.ColorTypes.Enum)}.NoContent);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("BadRequest")}(\"<MESSAGE>\");\n\t\t\t}}";
 
             usingString = CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType);
             publicAsync = CSharpPalette.Color("public async", CodeColoring.ColorTypes.PrimitiveType);
@@ -505,7 +505,10 @@ namespace Codeterpret.Implementations.BackEnd
         }
 
 
-
+        private string MethodName(string methodName)
+        {
+            return CSharpPalette.Color(methodName, CodeColoring.ColorTypes.MethodCall);
+        }
 
         /// <summary>
         /// Generates a comment block for a method
@@ -744,7 +747,7 @@ namespace Codeterpret.Implementations.BackEnd
                     methodName = RouteAttribute("HttpPost", $"{table.Name}/{Route}") + "\n\t" + MethodDefinition(accessible, "", "Add" + table.Name, Params) + methodEnd; // + $"\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
                     methodNameCall = $"Add{table.Name}";
                     call = ParamsCall;
-                    method = $"\t{methodName}\n\t{{\n\t\t{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});\n\t\t{returnStr} Ok({retStr});\n\t}}";
+                    method = $"\t{methodName}\n\t{{\n\t\t{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});\n\t\t{returnStr} {CSharpPalette.Color("Ok", CodeColoring.ColorTypes.MethodCall)}({retStr});\n\t}}";
                     break;
                 case CRUDTypes.Read:
                     methodName = RouteAttribute("HttpGet", $"{table.Name}/{byRoute}") + $"\n\t" + MethodDefinition(accessible, "", $"Get{table.Name}{by}", byParams); // + $"{ accessible} Get{table.Name}{by}({byParams}){methodEnd}";
@@ -758,7 +761,7 @@ namespace Codeterpret.Implementations.BackEnd
                     methodName = RouteAttribute("HttpPut", $"{table.Name}/") + $"\n\t" + MethodDefinition(accessible, "", $"Update{table.Name}", "[" + CSharpPalette.Color("FromBody", CodeColoring.ColorTypes.ClassName) + "] " + ColorTheTypeAndParam(table.Name, "entity")); // + $"{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
                     methodNameCall = $"Update{table.Name}";
                     call = ParamsCall;
-                    condition = $"{awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call})";
+                    condition = $"{awaitStr} {ServiceName(serviceName)}.{methodNameCall}({CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)})";
                     method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Updated")))}\n\t}}";
                     break;
                 case CRUDTypes.Delete:
@@ -829,7 +832,8 @@ namespace Codeterpret.Implementations.BackEnd
             List<string> where = new List<string>();
             string returnObj = "";
             string sql = "";
-            string execute = "";           
+            string execute = "";
+            string entityStr = CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter);
 
             foreach(var c in table.SQLColumns)
             {
@@ -867,7 +871,7 @@ namespace Codeterpret.Implementations.BackEnd
                         where.Add($"{c.Name} = @{c.Name}");
                     }
 
-                    ovariables.Add($"{c.Name} = {c.Name}");
+                    ovariables.Add($"{c.Name} = {entityStr}.{c.Name}");
                 }
 
                 if (crudType == CRUDTypes.Delete)
