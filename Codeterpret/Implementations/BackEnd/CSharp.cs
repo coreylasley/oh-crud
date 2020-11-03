@@ -26,7 +26,7 @@ namespace Codeterpret.Implementations.BackEnd
         private string controllerOkOrBadRequest = "";
         private string controllerNoContentBadRequest = "";
 
-        private CodeColoring CSharpPalette = new CodeColoring(CodeColoring.ColorPalettes.CSharp);
+        private CodeColoring CSharpPalette = new CodeColoring(CodeColoring.ColorPalettes.CSharp_VSDark);
         private CodeColoring NoPalette = new CodeColoring(CodeColoring.ColorPalettes.None);
         private string usingString;
         private string publicAsync;
@@ -510,12 +510,15 @@ namespace Codeterpret.Implementations.BackEnd
         /// <returns></returns>
         private string MetaComment(string summary, List<string> paramNames, string returns)
         {
-            string ret = $"\t\t/// <summary>\n\t\t/// {summary}\n\t\t/// </summary>\n";
+            string lt = CodeColoring.LessThanAlternate;
+            string gt = CodeColoring.GreateThanAlternate;
+
+            string ret = $"\t\t/// {lt}summary{gt}\n\t\t/// {summary}\n\t\t/// {lt}/summary{gt}\n";
             foreach (string pn in paramNames)
             {
-                ret += $"\t\t/// <param name=\"{pn}\"></param>\n";
+                ret += $"\t\t/// {lt}param name=\"{pn}\"{gt}{lt}/param{gt}\n";
             }
-            ret += $"\t\t/// <returns>{returns}</returns>\n";
+            ret += $"\t\t/// {lt}returns{gt}{returns}{lt}/returns{gt}\n";
             
             return CSharpPalette.Color(ret, CodeColoring.ColorTypes.Comment);
         }
@@ -1186,11 +1189,19 @@ namespace Codeterpret.Implementations.BackEnd
                  + "  </ItemGroup>\n\n"
                  + "</Project>";
 
-            return code.Replace("<", CodeColoring.LessThanAlternate).Replace(">", CodeColoring.GreateThanAlternate);
+            code = code.Replace("<", CodeColoring.LessThanAlternate).Replace(">", CodeColoring.GreateThanAlternate);
+
+            return code;
         }
 
         private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices)
         {
+            string publicStr = CSharpPalette.Color("public", CodeColoring.ColorTypes.PrimitiveType);
+            string publicVoidStr = CSharpPalette.Color("public void", CodeColoring.ColorTypes.PrimitiveType);
+            string servicesStr = CSharpPalette.Color("services", CodeColoring.ColorTypes.Parameter);
+            string appStr = CSharpPalette.Color("app", CodeColoring.ColorTypes.Parameter);
+            string envStr = CSharpPalette.Color("env", CodeColoring.ColorTypes.Parameter);
+
             string code = $"{usingString} System;\n"
                          + $"{usingString} System.Collections.Generic;\n"
                          + $"{usingString} System.Linq;\n"
@@ -1208,44 +1219,45 @@ namespace Codeterpret.Implementations.BackEnd
                          + "\n"
                          + $"{namespaceStr} {projectName}\n"
                          + "{\n"
-                         + $"    {publicClass} Startup\n"
+                         + $"    {publicClass} {CSharpPalette.Color("Startup", CodeColoring.ColorTypes.ClassName)}\n"
                          + "    {\n"
-                         + "        public Startup(IConfiguration configuration)\n"
+                         + $"        {publicStr} {CSharpPalette.Color("Startup", CodeColoring.ColorTypes.ClassName)}({CSharpPalette.Color("IConfiguration", CodeColoring.ColorTypes.InterfaceName)} {CSharpPalette.Color("configuration", CodeColoring.ColorTypes.Parameter)})\n"
                          + "        {\n"
-                         + "            Configuration = configuration;\n"
+                         + $"            Configuration = {CSharpPalette.Color("configuration", CodeColoring.ColorTypes.Parameter)};\n"
                          + "        }\n"
                          + "\n"
-                         + "        public IConfiguration Configuration { get; }\n"
+                         + $"       {publicStr} {CSharpPalette.Color("IConfiguration", CodeColoring.ColorTypes.InterfaceName)} Configuration {{ {CSharpPalette.Color("get", CodeColoring.ColorTypes.PrimitiveType)}; }}\n"
                          + "\n"
-                         + "        // This method gets called by the runtime. Use this method to add services to the container.\n"
-                         + "        public void ConfigureServices(IServiceCollection services)\n"
+                         + $"       {CSharpPalette.Color("// This method gets called by the runtime. Use this method to add services to the container.", CodeColoring.ColorTypes.Comment)} \n"
+                         + $"        {publicVoidStr} {CSharpPalette.Color("ConfigureServices", CodeColoring.ColorTypes.MethodCall)}({CSharpPalette.Color("IServiceCollection", CodeColoring.ColorTypes.InterfaceName)} {servicesStr})\n"
                          + "        {\n"
-                         + "            services.AddControllers();\n";
+                         + $"            {servicesStr}.AddControllers();\n";
 
-            foreach (var i in interfacesAndServices)
-            {
-                code += $"            services.AddSingleton<{i.Key}, {i.Value}>();\n";
-            }
+                        foreach (var i in interfacesAndServices)
+                        {
+                            string line = $"            {servicesStr}.AddSingleton{CodeColoring.LessThanAlternate}{CSharpPalette.Color(i.Key, CodeColoring.ColorTypes.InterfaceName)}, {CSharpPalette.Color(i.Value, CodeColoring.ColorTypes.ClassName)}{CodeColoring.GreateThanAlternate}();\n";
+                            code += line;
+                        }
             
                    code += "        }\n"
                          + "\n"
-                         + "        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.\n"
-                         + "        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)\n"
+                         + $"        {CSharpPalette.Color("// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.", CodeColoring.ColorTypes.Comment)}\n"
+                         + $"        {publicVoidStr} {CSharpPalette.Color("Configure", CodeColoring.ColorTypes.MethodCall)}({CodeColoring.LessThanAlternate}{CSharpPalette.Color("IApplicationBuilder", CodeColoring.ColorTypes.InterfaceName)} {appStr}, {CodeColoring.LessThanAlternate}{CSharpPalette.Color("IWebHostEnvironment", CodeColoring.ColorTypes.InterfaceName)} {envStr})\n"
                          + "        {\n"
-                         + $"            {ifStr} (env.IsDevelopment())\n"
+                         + $"            {ifStr} ({envStr}.IsDevelopment())\n"
                          + "            {\n"
-                         + "                app.UseDeveloperExceptionPage();\n"
+                         + $"                {appStr}.UseDeveloperExceptionPage();\n"
                          + "            }\n"
                          + "\n"
-                         + "            app.UseHttpsRedirection();\n"
+                         + $"            {appStr}.UseHttpsRedirection();\n"
                          + "\n"
-                         + "            app.UseRouting();\n"
+                         + $"            {appStr}.UseRouting();\n"
                          + "\n"
-                         + "            app.UseAuthorization();\n"
+                         + $"            {appStr}.UseAuthorization();\n"
                          + "\n"
-                         + "            app.UseEndpoints(endpoints =>\n"
+                         + $"            {appStr}.UseEndpoints(endpoints =>\n"
                          + "            {\n"
-                         + "                endpoints.MapControllers();\n"
+                         + $"                endpoints.MapControllers();\n"
                          + "            });\n"
                          + "        }\n"
                          + "    }\n"

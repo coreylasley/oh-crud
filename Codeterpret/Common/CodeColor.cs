@@ -17,7 +17,7 @@ namespace Codeterpret.Common
         public enum ColorPalettes
         {
             None,
-            CSharp
+            CSharp_VSDark
         }
 
         public enum ColorTypes
@@ -73,7 +73,7 @@ namespace Codeterpret.Common
                     ColorCodes.Add(ColorTypes.Accessibility, "#1e1e1e");
                     break;
 
-                case ColorPalettes.CSharp:
+                case ColorPalettes.CSharp_VSDark:
                     // Defaults based on C# / Visual Studio / Dark Mode
                     ColorCodes = new Dictionary<ColorTypes, string>();
                     ColorCodes.Add(ColorTypes.Default, "#dcdcdc");
@@ -124,7 +124,11 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string RenderWithColor(string text)
         {
-            return $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@", "")}</span></pre>".Replace(CodeColoring.GreateThanAlternate, ">").Replace(CodeColoring.LessThanAlternate, "<");
+            text = $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@", "")}</span></pre>";
+
+            text = text.Replace(CodeColoring.GreateThanAlternate, "&gt;").Replace(CodeColoring.LessThanAlternate, "&lt;");
+
+            return text;
         }
 
         /// <summary>
