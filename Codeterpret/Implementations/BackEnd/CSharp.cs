@@ -625,23 +625,32 @@ namespace Codeterpret.Implementations.BackEnd
         }
 
         private string ColorTheType(string type)
-        {            
-
+        {
+            string code = "";
             string[] primitiveTypes = "bool,byte,sbyte,char,decimal,double,float,int,uint,long,ulong,short,ushort,object,string,dynamic".Split(',');
-            if (primitiveTypes.Contains(type))
+            if (primitiveTypes.Contains(type) || primitiveTypes.Contains(type.Replace("?","")))
             {
-                return CSharpPalette.Color(type, CodeColoring.ColorTypes.PrimitiveType);
+                code = CSharpPalette.Color(type, CodeColoring.ColorTypes.PrimitiveType);
+                if (code.Contains("?"))
+                    code = code.Replace("?", CSharpPalette.Color("?", CodeColoring.ColorTypes.Default));
+
+                return code;
             }
             else
             {
                 type = type.Replace("<", "~!").Replace(">", "~@");
                 // Makes the < and > in a type (i.e. List<int>) the default color
-                string code = type.Replace("~!", CSharpPalette.Color("~!", CodeColoring.ColorTypes.Default)).Replace("~@", CSharpPalette.Color("~@", CodeColoring.ColorTypes.Default));
+                code = type.Replace("~!", CSharpPalette.Color("~!", CodeColoring.ColorTypes.Default)).Replace("~@", CSharpPalette.Color("~@", CodeColoring.ColorTypes.Default));
                 code = code.Replace("~!", "<").Replace("~@", ">");
                 code = CSharpPalette.Color(code, CodeColoring.ColorTypes.Type);
                 
                 return code;
             }
+        }
+
+        private string ColorTheTypeAndParam(string type, string param)
+        {
+            return $"{ColorTheType(type)} {CSharpPalette.Color(param, CodeColoring.ColorTypes.Parameter)}";
         }
 
         private string GenerateControllerMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string serviceName, string controllerName, string interfaceName)
@@ -694,7 +703,7 @@ namespace Codeterpret.Implementations.BackEnd
                     }
 
                     by += c.Name;
-                    byParams += $"{c.CSharpType(fromDBType)} {c.Name}";
+                    byParams += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
                     byParamsCall += $"{c.Name}";
                     byRoute += $"{{{c.Name}}}/";
                 }
@@ -703,7 +712,7 @@ namespace Codeterpret.Implementations.BackEnd
                     if (Params != "") Params += ", ";
                     if (ParamsCall != "") ParamsCall += ", ";
 
-                    Params += $"{c.CSharpType(fromDBType)} {c.Name}";
+                    Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
                     Route += $"{{{c.Name}}}/";
                 }
             }
@@ -952,7 +961,7 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateControllerClass(string projectName, string controllerName, string route, string code)
         {
-            string ret = $"using System;\nusing System.Collections.Generic;\nusing System.Net;\nusing System.Linq;\nusing System.Threading.Tasks;\nusing Microsoft.AspNetCore.Mvc;\nusing Microsoft.Extensions.Logging;\nusing {projectName}.Interfaces;\nusing {projectName}.Services;\nusing {projectName}.Models;\n\n{namespaceStr} {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    {publicClass} {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
+            string ret = $"{usingString} System;\n{usingString} System.Collections.Generic;\n{usingString} System.Net;\n{usingString} System.Linq;\n{usingString} System.Threading.Tasks;\n{usingString} Microsoft.AspNetCore.Mvc;\n{usingString} Microsoft.Extensions.Logging;\n{usingString} {projectName}.Interfaces;\n{usingString} {projectName}.Services;\n{usingString} {projectName}.Models;\n\n{namespaceStr} {projectName}.Controllers\n{{\n    [ApiController]\n    [Route(\"[{route}]\")]\n    {publicClass} {controllerName}Controller : ControllerBase\n    {{\n{code.Indent('\t', 1)}\n    }}\n}}";
 
             return ret;
         }
