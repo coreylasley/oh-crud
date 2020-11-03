@@ -38,6 +38,9 @@ namespace Codeterpret.Implementations.BackEnd
         private string catchStr;
         private string publicClass;
         private string namespaceStr;
+        private string publicStr;
+        private string publicVoidStr;
+        private string servicesStr;
 
         public CSharp()
         {
@@ -58,6 +61,9 @@ namespace Codeterpret.Implementations.BackEnd
             taskIActionResult = CSharpPalette.Color(CSharpPalette.Color("Task", CodeColoring.ColorTypes.Type) + CodeColoring.LessThanAlternate + CSharpPalette.Color("IActionResult", CodeColoring.ColorTypes.InterfaceName) + CodeColoring.GreateThanAlternate, CodeColoring.ColorTypes.Default);
             publicClass = CSharpPalette.Color("public class", CodeColoring.ColorTypes.PrimitiveType);
             namespaceStr = CSharpPalette.Color("namespace", CodeColoring.ColorTypes.PrimitiveType);
+            publicStr = CSharpPalette.Color("public", CodeColoring.ColorTypes.PrimitiveType);
+            publicVoidStr = CSharpPalette.Color("public void", CodeColoring.ColorTypes.PrimitiveType);
+            servicesStr = CSharpPalette.Color("services", CodeColoring.ColorTypes.Parameter);
 
         }
 
@@ -567,7 +573,7 @@ namespace Codeterpret.Implementations.BackEnd
                     by += c.Name;
 
                     // i.e. string FirstName
-                    byParams += $"{CSharpPalette.Color(c.CSharpType(fromDBType), CodeColoring.ColorTypes.PrimitiveType)} {CSharpPalette.Color(c.Name, CodeColoring.ColorTypes.Parameter)}";
+                    byParams += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
                     paramNamesA.Add(c.Name);
                 }
                 else
@@ -575,7 +581,7 @@ namespace Codeterpret.Implementations.BackEnd
                     if (Params != "") Params += ", ";
 
                     // i.e. int UserId
-                    Params += $"{CSharpPalette.Color(c.CSharpType(fromDBType), CodeColoring.ColorTypes.PrimitiveType)} {CSharpPalette.Color(c.Name, CodeColoring.ColorTypes.Parameter)}";
+                    Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}"; 
                     paramNamesB.Add(c.Name);
                 }
             }
@@ -591,7 +597,7 @@ namespace Codeterpret.Implementations.BackEnd
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Update:
-                    methodName = $"{(asInterface ? MetaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}\t\t{MethodDefinition(accessible, "Task<bool>", "Update" + table.Name, table.Name + " entity")}{methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}\t\t{MethodDefinition(accessible, "Task<bool>", "Update" + table.Name, ColorTheTypeAndParam(table.Name, "entity"))}{methodEnd}";
                     returnType = "bool";
                     break;
                 case CRUDTypes.Delete:
@@ -621,7 +627,7 @@ namespace Codeterpret.Implementations.BackEnd
         private string MethodDefinition(string accessibility, string returnType, string methodName, string parameters)
         {
 
-            return $"{CSharpPalette.Color(accessibility, CodeColoring.ColorTypes.PrimitiveType)} {ColorTheType(returnType)} {CSharpPalette.Color(methodName, CodeColoring.ColorTypes.MethodCall)}({parameters})";
+            return $"{CSharpPalette.Color(accessibility, CodeColoring.ColorTypes.PrimitiveType)} {ColorTheType(returnType)} {CSharpPalette.Color(methodName, CodeColoring.ColorTypes.MethodCall)}({parameters})".Trim();
         }
 
         private string ColorTheType(string type)
@@ -919,16 +925,18 @@ namespace Codeterpret.Implementations.BackEnd
             string emptyConstructor = "";
             string fullConstructor = "";
 
+            string publicStr = CSharpPalette.Color("public", CodeColoring.ColorTypes.PrimitiveType);
+
             StringBuilder sbMainClassBlock = new StringBuilder();
             StringBuilder sbClassProperties = new StringBuilder();
             StringBuilder sbConstructorParameters = new StringBuilder();
             StringBuilder sbConstructorAssignments = new StringBuilder();
 
             if (settings.IncludeSerializeDecorator) sbMainClassBlock.AppendLine("[Serializable]");
-            sbMainClassBlock.AppendLine($"{publicClass} {table.Name}\n{{");
-            props = "{ get; set; }";
-            emptyConstructor = $"\n\tpublic {table.Name}() {{}}\n";
-            fullConstructor = $"\n\tpublic {table.Name}([[PARAMETERS]])\n\t{{\n[[ASSIGNMENTS]]\t}}";
+            sbMainClassBlock.AppendLine($"{publicClass} {CSharpPalette.Color(table.Name, CodeColoring.ColorTypes.ClassName)}\n{{");
+            props = $"{{ {CSharpPalette.Color("get", CodeColoring.ColorTypes.PrimitiveType)}; {CSharpPalette.Color("set", CodeColoring.ColorTypes.PrimitiveType)}; }}";
+            emptyConstructor = $"\n\t{publicStr} {table.Name}() {{}}\n";
+            fullConstructor = $"\n\t{publicStr} {table.Name}([[PARAMETERS]])\n\t{{\n[[ASSIGNMENTS]]\t}}";
 
             // Loop through each of the columns...
             foreach (SQLColumn sc in table.SQLColumns)
@@ -936,7 +944,7 @@ namespace Codeterpret.Implementations.BackEnd
                 comment = sc.Comment;
                 if (comment != "") comment = @"// " + comment;
 
-                sbClassProperties.AppendLine($"\tpublic {sc.CSharpType(fromDBType)} {sc.Name} {props} {comment}");
+                sbClassProperties.AppendLine($"\t{publicStr} {ColorTheTypeAndParam(sc.CSharpType(fromDBType), sc.Name)} {props} {comment}");
                 if (sbConstructorParameters.Length > 0) sbConstructorParameters.Append(", ");
                 sbConstructorParameters.Append(sc.CSharpType(fromDBType) + " " + localVariable(sc.Name));
                 sbConstructorAssignments.Append($"\t\t{sc.Name} = {localVariable(sc.Name)};\n");
@@ -976,9 +984,9 @@ namespace Codeterpret.Implementations.BackEnd
                          + "\n"
                          + $"{namespaceStr} {projectName}.Interfaces\n"
                          + "{\n"
-                         + $"    public interface {interfaceName}\n"
+                         + $"    {publicStr} {CSharpPalette.Color("interface", CodeColoring.ColorTypes.PrimitiveType)} {CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)}\n"
                          + "    {\n"
-                         + $"{code.Indent('\t', 1)}"
+                         + $"{code.Indent('\t', 0)}"
                          + "    }\n"
                          + "}";
 
@@ -1205,9 +1213,7 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices)
         {
-            string publicStr = CSharpPalette.Color("public", CodeColoring.ColorTypes.PrimitiveType);
-            string publicVoidStr = CSharpPalette.Color("public void", CodeColoring.ColorTypes.PrimitiveType);
-            string servicesStr = CSharpPalette.Color("services", CodeColoring.ColorTypes.Parameter);
+            
             string appStr = CSharpPalette.Color("app", CodeColoring.ColorTypes.Parameter);
             string envStr = CSharpPalette.Color("env", CodeColoring.ColorTypes.Parameter);
 

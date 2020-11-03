@@ -104,7 +104,7 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string Color(string text, ColorTypes colorType)
         {
-            return $"<@@@span style=\"color:{GetColor(colorType)}\"@@@>{text}</@@@span@@@>";
+            return $"&@@@span style=\"color:{GetColor(colorType)}\"@@@&{text}*/@@@span@@@*";
         }
 
         /// <summary>
@@ -124,7 +124,7 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string RenderWithColor(string text)
         {
-            text = $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@", "")}</span></pre>";
+            text = $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@&", ">").Replace("@@@*", ">").Replace("&@@@", "<").Replace("*/@@@", "</")}</span></pre>";
 
             text = text.Replace(CodeColoring.GreateThanAlternate, "&gt;").Replace(CodeColoring.LessThanAlternate, "&lt;");
 
@@ -138,9 +138,9 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string RenderWithNoColor(string text)
         {
-            string startTag = "<@@@span style=\"color:";
-            string endTag = "@@@>";
-            text = text.Replace("</@@@span@@@>", "");
+            string startTag = "&@@@span style=\"color:";
+            string endTag = "@@@&";
+            text = text.Replace("*/@@@span@@@*", "");
 
             int sPos = 0;
             int ePos = 0;
