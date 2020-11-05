@@ -28,7 +28,9 @@ namespace Codeterpret.Common
             Read,
             Update,
             Delete,
-            Constructor
+            // Yeah not CRUD, I know
+            Constructor,
+            ListsByForeignKeys
         }
 
         public enum FileOutputTypes

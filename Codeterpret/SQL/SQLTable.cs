@@ -31,6 +31,75 @@ namespace Codeterpret.SQL
         
         }
 
+        /// <summary>
+        /// Gets the Column(s) that best identify records, an Identity column supercedes, if no Identity column is found, primary key(s) are used, if no primary keys(s) are found, foriegn key(s) are used
+        /// </summary>
+        public List<SQLColumn> IdentifyingColumns
+        {
+            get
+            {
+                List<SQLColumn> ret = new List<SQLColumn>();
+
+                SQLColumn identity = SQLColumns.FirstOrDefault(x => x.IsIdentity || x.IsUnique);
+                if (identity != null)
+                {
+                    ret.Add(identity);
+                }
+                else
+                {
+                    List<SQLColumn> pks = PrimaryKeys;
+                    if (pks != null && pks.Count > 0)
+                    {
+                        ret.AddRange(pks);
+                    }
+                    else
+                    {
+                        List<SQLColumn> fks = SQLColumns.Where(x => x.ForeignKey != null).ToList();
+                        if (fks != null && fks.Count > 0)
+                        {
+
+                            ret.AddRange(fks);
+                        }
+                    }
+                }
+
+                return ret;
+            }
+        }
+
+        /// <summary>
+        /// Get the Column(s) that do not appear to be identifying records
+        /// </summary>
+        public List<SQLColumn> NonIdentifyingColumns
+        {
+            get
+            {
+                return SQLColumns.Where(x => !IdentifyingColumns.Contains(x)).ToList();
+            }
+        }
+
+        /// <summary>
+        /// If the Columns are ALL Foriegn Keys
+        /// </summary>
+        public bool IsIntersectionTable
+        {
+            get
+            {
+                return SQLColumns.Where(x => x.ForeignKey != null).Count() == SQLColumns.Count();
+            }
+        }
+
+        /// <summary>
+        /// Return all Primary Keys in this SQL Table
+        /// </summary>
+        public List<SQLColumn> PrimaryKeys
+        {
+            get
+            {
+                return SQLColumns.Where(x => x.IsPrimaryKey).ToList();
+            }
+        }
+
 
         /// <summary>
         /// Return all Foreign Keys associated to this SQLTable

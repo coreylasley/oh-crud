@@ -124,7 +124,39 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string RenderWithColor(string text)
         {
-            text = $"<pre style=\"background-color:{GetColor(ColorTypes.Background)}; padding:30px;\"><span style=\"color:{GetColor(ColorTypes.Default)}\">{text.Replace("@@@&", ">").Replace("@@@*", ">").Replace("&@@@", "<").Replace("*/@@@", "</")}</span></pre>";
+            //string css = "";
+
+            string css = "<style>"
+                         + ".code-render {"
+                         + "    counter-reset: linenumber;"
+                         + "    padding: 15px;"
+                         + "    height: 500px;"
+                         + "    overflow-y: scroll;"
+                         + "    color: silver;"
+                         + "    resize: vertical;"
+                         + $"    background-color: {GetColor(ColorTypes.Background)};"
+                         + "}\n";
+            /*
+                         + ".code-render > .code-l:not(:only-child)::before {"
+                         + "    content: counter(linenumber, decimal-leading-zero) \"     \";"
+                         + "    counter-increment: linenumber;"
+                         + "    color:#2b90af;"
+                         + "}"
+            */
+                         css += "</style>";
+            
+
+            text = text.Replace("@@@&", ">").Replace("@@@*", ">").Replace("&@@@", "<").Replace("*/@@@", "</");
+            string final = text;
+            
+            /*
+            string[] lines = text.Split('\n');
+            foreach(string l in lines)
+            {
+                final += $"<code class=\"code-l\">{l}</code>\n";
+            }
+            */
+            text = $"{css}<pre class=\"code-render\"><span style=\"color:{GetColor(ColorTypes.Default)}\">\n{final}</span></pre>";
 
             text = text.Replace(CodeColoring.GreateThanAlternate, "&gt;").Replace(CodeColoring.LessThanAlternate, "&lt;");
 

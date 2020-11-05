@@ -39,8 +39,14 @@ namespace Codeterpret.Implementations.BackEnd
         private string publicClass;
         private string namespaceStr;
         private string publicStr;
+        private string privateStr;
         private string publicVoidStr;
         private string servicesStr;
+        private string nullStr;
+        private string falseStr;
+        private string retStr;
+        private string varRet;
+        private string awaitStr;
 
         public CSharp()
         {
@@ -50,11 +56,16 @@ namespace Codeterpret.Implementations.BackEnd
             ifStr = CSharpPalette.Color("if", CodeColoring.ColorTypes.Flow);
             elseStr = CSharpPalette.Color("else", CodeColoring.ColorTypes.Flow);
             tryStr = CSharpPalette.Color("try", CodeColoring.ColorTypes.Flow);
-            catchStr = CSharpPalette.Color("catch", CodeColoring.ColorTypes.Flow);            
+            catchStr = CSharpPalette.Color("catch", CodeColoring.ColorTypes.Flow);
+            nullStr = CSharpPalette.Color("null", CodeColoring.ColorTypes.PrimitiveType);
+            falseStr = CSharpPalette.Color("false", CodeColoring.ColorTypes.PrimitiveType);
+            retStr = CSharpPalette.Color("ret", CodeColoring.ColorTypes.Parameter);
+            varRet = CSharpPalette.Color("var", CodeColoring.ColorTypes.PrimitiveType) + " " + retStr;
+            awaitStr = CSharpPalette.Color("await", CodeColoring.ColorTypes.PrimitiveType);
 
-            controllerTryCatchBlock = $"{tryStr}\n\t\t{{\n\t\t\t<CODE>\n\t\t}}\n\t\t{catchStr}\n\t\t{{\n\t\t\t{returnStr} {MethodName("StatusCode")}(({ColorTheType("int")}){CSharpPalette.Color("HttpStatusCode", CodeColoring.ColorTypes.Enum)}.InternalServerError);\n\t\t}}";
-            controllerOkOrBadRequest = $"<CALL>\n\t\t\t{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("Ok")}(<RETURN>);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("BadRequest")}(\"<MESSAGE>\");\n\t\t\t}}";
-            controllerNoContentBadRequest = $"{ifStr} (<CONDITION>)\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("StatusCode")}(({ColorTheType("int")}){CSharpPalette.Color("HttpStatusCode", CodeColoring.ColorTypes.Enum)}.NoContent);\n\t\t\t}}\n\t\t\t{elseStr}\n\t\t\t{{\n\t\t\t\t{returnStr} {MethodName("BadRequest")}(\"<MESSAGE>\");\n\t\t\t}}";
+            controllerTryCatchBlock = $"{tryStr}\n\t{{\n\t\t<CODE>\n\t}}\n\t{catchStr}\n\t{{\n\t\t{returnStr} {MethodName("StatusCode")}(({ColorTheType("int")}){CSharpPalette.Color("HttpStatusCode", CodeColoring.ColorTypes.Enum)}.InternalServerError);\n\t}}";
+            controllerOkOrBadRequest = $"<CALL>\n\t\t{ifStr} (<CONDITION>)\n\t\t{{\n\t\t\t{returnStr} {MethodName("Ok")}(<RETURN>);\n\t\t}}\n\t\t{elseStr}\n\t\t{{\n\t\t\t{returnStr} {MethodName("BadRequest")}(\"<MESSAGE>\");\n\t\t}}";
+            controllerNoContentBadRequest = $"{ifStr} (<CONDITION>)\n\t\t{{\n\t\t\t{returnStr} {MethodName("StatusCode")}(({ColorTheType("int")}){CSharpPalette.Color("HttpStatusCode", CodeColoring.ColorTypes.Enum)}.NoContent);\n\t\t}}\n\t\t{elseStr}\n\t\t{{\n\t\t\t{returnStr} {MethodName("BadRequest")}(\"<MESSAGE>\");\n\t\t}}";
 
             usingString = CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType);
             publicAsync = CSharpPalette.Color("public async", CodeColoring.ColorTypes.PrimitiveType);
@@ -62,8 +73,10 @@ namespace Codeterpret.Implementations.BackEnd
             publicClass = CSharpPalette.Color("public class", CodeColoring.ColorTypes.PrimitiveType);
             namespaceStr = CSharpPalette.Color("namespace", CodeColoring.ColorTypes.PrimitiveType);
             publicStr = CSharpPalette.Color("public", CodeColoring.ColorTypes.PrimitiveType);
+            privateStr = CSharpPalette.Color("private", CodeColoring.ColorTypes.PrimitiveType);
             publicVoidStr = CSharpPalette.Color("public void", CodeColoring.ColorTypes.PrimitiveType);
             servicesStr = CSharpPalette.Color("services", CodeColoring.ColorTypes.Parameter);
+            
 
         }
 
@@ -558,36 +571,47 @@ namespace Codeterpret.Implementations.BackEnd
             List<string> paramNamesA = new List<string>();
             List<string> paramNamesB = new List<string>();
 
-            // Get the primary key colums to be used in method names, and parameters
-            foreach (var c in table.SQLColumns)
+
+            // Loop through all of the columns that can be used as record identifiers
+            foreach (var c in table.IdentifyingColumns)
             {
-                if (c.IsIdentity || c.IsUnique)
+                if (by != "")
                 {
-                    if (by != "")
-                    {
-                        by += "And";
-                        byParams += ", ";
-                    }
-                    else
-                    {
-                        by = "By";
-                    }
-
-                    by += c.Name;
-
-                    // i.e. string FirstName
-                    byParams += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
-                    paramNamesA.Add(c.Name);
+                    by += "And";
+                    byParams += ", ";
                 }
                 else
                 {
-                    if (Params != "") Params += ", ";
+                    by = "By";
+                }
 
+                by += c.Name;
+
+                // i.e. string FirstName
+                byParams += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
+                paramNamesA.Add(c.Name);
+
+                // If the identifying column is a ForeignKey, its something we need to pass in to the method as well
+                if (c.ForeignKey != null)
+                {
+                    if (Params != "") Params += ", ";
+                    
                     // i.e. int UserId
-                    Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}"; 
+                    Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
                     paramNamesB.Add(c.Name);
                 }
             }
+
+            // Loop through all of the columns that are likely not used as record identifiers
+            foreach (var c in table.NonIdentifyingColumns)
+            {
+                if (Params != "") Params += ", ";
+
+                // i.e. int UserId
+                Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
+                paramNamesB.Add(c.Name);
+            }
+
 
             switch (crudType)
             {
@@ -617,7 +641,7 @@ namespace Codeterpret.Implementations.BackEnd
             switch (ORM)
             {
                 case ORMTypes.Dapper:
-                    method = $"{methodName}\n\t\t{{\n\t\t\t{ColorTheType(returnType)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)} = {(returnType == "bool" ? "false" : "null" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\t{CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)};\n\t\t}}";
+                    method = $"{methodName}\n\t\t{{\n\t\t\t{ColorTheType(returnType)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)} = {(returnType == "bool" ? $"{falseStr}" : $"{nullStr}" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\t{CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)};\n\t\t}}";
                     break;
                 case ORMTypes.ADO:
                     method = $"{methodName}\n\t\t{{\n{GenerateADOMethodBody(table, fromDBType, crudType)}\n}}";
@@ -629,8 +653,8 @@ namespace Codeterpret.Implementations.BackEnd
 
         private string MethodDefinition(string accessibility, string returnType, string methodName, string parameters)
         {
-
-            return $"{CSharpPalette.Color(accessibility, CodeColoring.ColorTypes.PrimitiveType)} {ColorTheType(returnType)} {CSharpPalette.Color(methodName, CodeColoring.ColorTypes.MethodCall)}({parameters})".Trim();
+            if (returnType != "") returnType = " " + ColorTheType(returnType);
+            return $"{CSharpPalette.Color(accessibility, CodeColoring.ColorTypes.PrimitiveType)}{ColorTheType(returnType)} {CSharpPalette.Color(methodName, CodeColoring.ColorTypes.MethodCall)}({parameters})".Trim();
         }
 
         private string ColorTheType(string type)
@@ -665,7 +689,7 @@ namespace Codeterpret.Implementations.BackEnd
             return $"{ColorTheType(type)} {CSharpPalette.Color(param, CodeColoring.ColorTypes.Parameter)}";
         }
 
-        private string GenerateControllerMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string serviceName, string controllerName, string interfaceName)
+        private string GenerateControllerMethod(SQLTable table, DatabaseTypes fromDBType, CRUDTypes crudType, string serviceName, string controllerName, string interfaceName, string listByForeignKey = "")
         {
             string method = "";
 
@@ -681,45 +705,41 @@ namespace Codeterpret.Implementations.BackEnd
             string accessible = $"{publicAsync} {taskIActionResult}"; //$"public async {CSharpPalette.Color("Task", CodeColoring.ColorTypes.ClassName)}{CodeColoring.LessThanAlternate}{CSharpPalette.Color("IActionResult", CodeColoring.ColorTypes.InterfaceName)}{CodeColoring.GreateThanAlternate}";
             string methodEnd = "";
 
-            string retStr = CSharpPalette.Color("ret", CodeColoring.ColorTypes.Parameter);
-            string varRet = CSharpPalette.Color("var", CodeColoring.ColorTypes.PrimitiveType) + " " + retStr;
-            string awaitStr = CSharpPalette.Color("await", CodeColoring.ColorTypes.PrimitiveType);
-            
-
+                        
+            // Yeah not really CRUD, but we need a good place to build our Constructor method
             if (crudType == CRUDTypes.Constructor)
             {
                 
-                return $"       {CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)}  {ServiceName(serviceName)};\n"
-                                 + "\n"
-                                 + $"    {publicStr} {CSharpPalette.Color(controllerName, CodeColoring.ColorTypes.ClassName)}({CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)} {CSharpPalette.Color(serviceName, CodeColoring.ColorTypes.Parameter)})\n"
-                                 + "    {\n"
-                                 + $"        {ServiceName(serviceName)} = {CSharpPalette.Color(serviceName, CodeColoring.ColorTypes.Parameter)};\n"
-                                 + "    }";
+                return $"{CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)}  {ServiceName(serviceName)};\n"
+                     + $"\n"
+                     + $"{publicStr} {CSharpPalette.Color(controllerName, CodeColoring.ColorTypes.ClassName)}({CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)} {CSharpPalette.Color(serviceName, CodeColoring.ColorTypes.Parameter)})\n"
+                     + $"{{\n"
+                     + $"    {ServiceName(serviceName)} = {CSharpPalette.Color(serviceName, CodeColoring.ColorTypes.Parameter)};\n"
+                     + $"}}";
                 
             }
 
-            // Get the primary key colums to be used in method names, and parameters
-            foreach (var c in table.SQLColumns)
+            // Loop through all of the columns that can be used as record identifiers
+            foreach (var c in table.IdentifyingColumns)
             {
-                if (c.IsIdentity || c.IsUnique)
+                if (by != "")
                 {
-                    if (by != "")
-                    {
-                        by += "And";
-                        byParams += ", ";
-                        byParamsCall += ", ";
-                    }
-                    else
-                    {
-                        by = "By";
-                    }
-
-                    by += c.Name;
-                    byParams += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
-                    byParamsCall += $"{c.Name}";
-                    byRoute += $"{{{c.Name}}}/";
+                    by += "And";
+                    byParams += ", ";
+                    byParamsCall += ", ";
                 }
                 else
+                {
+                    by = "By";
+                }
+
+                by += c.Name;
+                byParams += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
+                byParamsCall += $"{c.Name}";
+                byRoute += $"{{{c.Name}}}/";
+
+                // If the identifying column is a ForeignKey, its something we need to pass in to the method as well
+                if (c.ForeignKey != null)
                 {
                     if (Params != "") Params += ", ";
                     if (ParamsCall != "") ParamsCall += ", ";
@@ -729,48 +749,55 @@ namespace Codeterpret.Implementations.BackEnd
                 }
             }
 
-            string methodNameCall = "";
-            string condition = "";
-            string callToService = "";
+            // Loop through all of the columns that are likely not used as record identifiers
+            foreach (var c in table.NonIdentifyingColumns)
+            {
+                if (Params != "") Params += ", ";
+                if (ParamsCall != "") ParamsCall += ", ";
+
+                Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
+                Route += $"{{{c.Name}}}/";
+            }
+                      
+
+            string methodNameCall;
+            string condition;
+            string callToService;
 
             switch (crudType)
             {
-                case CRUDTypes.Constructor:
-                    method = $"   I{serviceName}  _{serviceName};\n"
-                                 + "\n"
-                                 + $"    public {controllerName}(I{serviceName} {serviceName})\n"
-                                 + "    {\n"
-                                 + $"        {ServiceName(serviceName)} = {serviceName};\n"
-                                 + "    }";
-                    break;
                 case CRUDTypes.Create:
-                    methodName = RouteAttribute("HttpPost", $"{table.Name}/{Route}") + "\n\t" + MethodDefinition(accessible, "", "Add" + table.Name, Params) + methodEnd; // + $"\n\t{accessible} Add{table.Name}({Params}){methodEnd}";
+                    methodName = RouteAttribute("HttpPost", $"{table.Name}/{Route}") + "\n" + MethodDefinition(accessible, "", "Add" + table.Name, Params) + methodEnd; 
                     methodNameCall = $"Add{table.Name}";
                     call = ParamsCall;
-                    method = $"\t{methodName}\n\t{{\n\t\t{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});\n\t\t{returnStr} {CSharpPalette.Color("Ok", CodeColoring.ColorTypes.MethodCall)}({retStr});\n\t}}";
+                    method = $"{methodName}\n{{\n\t{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});\n\t{returnStr} {CSharpPalette.Color("Ok", CodeColoring.ColorTypes.MethodCall)}({retStr});\n}}";
                     break;
                 case CRUDTypes.Read:
-                    methodName = RouteAttribute("HttpGet", $"{table.Name}/{byRoute}") + $"\n\t" + MethodDefinition(accessible, "", $"Get{table.Name}{by}", byParams); // + $"{ accessible} Get{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = RouteAttribute("HttpGet", $"{table.Name}/{byRoute}") + $"\n" + MethodDefinition(accessible, "", $"Get{table.Name}{by}", byParams); 
                     methodNameCall = $"Read{table.Name}{by}";
                     call = byParamsCall;
                     callToService = $"{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});";
                     condition = $"{retStr} != null";
-                    method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerOkOrBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Found"))).Replace("<RETURN>", "ret").Replace("<CALL>", callToService)}\n\t}}";
+                    method = $"{methodName}\n{{\n\t{controllerTryCatchBlock.Replace("<CODE>", controllerOkOrBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Found"))).Replace("<RETURN>", "ret").Replace("<CALL>", callToService)}\n}}";
                     break;
                 case CRUDTypes.Update:
-                    methodName = RouteAttribute("HttpPut", $"{table.Name}/") + $"\n\t" + MethodDefinition(accessible, "", $"Update{table.Name}", "[" + CSharpPalette.Color("FromBody", CodeColoring.ColorTypes.ClassName) + "] " + ColorTheTypeAndParam(table.Name, "entity")); // + $"{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
+                    methodName = RouteAttribute("HttpPut", $"{table.Name}/") + $"\n" + MethodDefinition(accessible, "", $"Update{table.Name}", "[" + CSharpPalette.Color("FromBody", CodeColoring.ColorTypes.ClassName) + "] " + ColorTheTypeAndParam(table.Name, "entity")); // + $"{accessible} Update{table.Name}({table.Name} entity){methodEnd}";
                     methodNameCall = $"Update{table.Name}";
                     call = ParamsCall;
                     condition = $"{awaitStr} {ServiceName(serviceName)}.{methodNameCall}({CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)})";
-                    method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Updated")))}\n\t}}";
+                    method = $"{methodName}\n{{\n\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Updated")))}\n}}";
                     break;
                 case CRUDTypes.Delete:
-                    methodName = RouteAttribute("HttpDelete", $"{table.Name}/{byRoute}") + $"\n\t{accessible} Delete{table.Name}{by}({byParams}){methodEnd}";
+                    methodName = RouteAttribute("HttpDelete", $"{table.Name}/{byRoute}") + $"\n" + MethodDefinition(accessible, "", $"Delete{table.Name}{by}", byParams);
                     methodNameCall = $"Delete{table.Name}{by}";
                     call = byParamsCall;
                     condition = $"{awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call})";
-                    method = $"\t{methodName}\n\t{{\n\t\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Deleted")))}\n\t}}";
+                    method = $"{methodName}\n{{\n\t{controllerTryCatchBlock.Replace("<CODE>", controllerNoContentBadRequest.Replace("<CONDITION>", condition).Replace("<MESSAGE>", ColorToString(table.Name + " Not Deleted")))}\n}}";
                     break;
+                case CRUDTypes.ListsByForeignKeys:
+
+                    break;
+
             }
                       
 
@@ -824,7 +851,7 @@ namespace Codeterpret.Implementations.BackEnd
             string newStr = CSharpPalette.Color("new", CodeColoring.ColorTypes.PrimitiveType);
 
             string con = GetConnectionType(fromDBType);
-            string body = $"\t\t\t{CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType)} ({ColorTheType(con)} conn = {newStr} {ColorTheType(con)}(_connectionString))\n\t\t\t{{\n\t\t\t\t";
+            string body = $"\t\t\t{CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType)} ({ColorTheType(con)} conn = {newStr} {ColorTheType(con)}({CSharpPalette.Color("_connectionString", CodeColoring.ColorTypes.Parameter)}))\n\t\t\t{{\n\t\t\t\t";
 
             List<string> columns = new List<string>();
             List<string> variables = new List<string>();
@@ -862,7 +889,7 @@ namespace Codeterpret.Implementations.BackEnd
 
                 if (crudType == CRUDTypes.Update)
                 {
-                    if (!(c.IsIdentity || c.IsUnique))
+                    if (!(c.IsIdentity || c.IsUnique || c.IsPrimaryKey))
                     {
                         columns.Add($"{c.Name} = @{c.Name}");
                     }
@@ -876,7 +903,7 @@ namespace Codeterpret.Implementations.BackEnd
 
                 if (crudType == CRUDTypes.Delete)
                 {
-                    if (c.IsIdentity || c.IsUnique)
+                    if (c.IsIdentity || c.IsUnique || c.IsPrimaryKey)
                     {
                         where.Add($"{c.Name} = @{c.Name}");
                         ovariables.Add($"{c.Name} = {c.Name}");
@@ -890,6 +917,12 @@ namespace Codeterpret.Implementations.BackEnd
             
             string sqlStr = CSharpPalette.Color("sql", CodeColoring.ColorTypes.Parameter);
 
+            string whereStr = "";
+            if (where.Count > 0)
+                whereStr = where.ToCommaList();
+            else
+                whereStr = "/* Cannot determine WHERE clause due to missing or incompatible primary key(s). Please check your schema on this table */";
+
             switch (crudType)
             {
                 case CRUDTypes.Create:
@@ -899,17 +932,17 @@ namespace Codeterpret.Implementations.BackEnd
                     break;
                 case CRUDTypes.Read:
                     returnObj = ColorTheType(table.Name);
-                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"SELECT {columns.ToCommaList()} FROM {table.Name} WHERE {where.ToCommaList()}\"", CodeColoring.ColorTypes.String) + ";";
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"SELECT {columns.ToCommaList()} FROM {table.Name} WHERE {whereStr}\"", CodeColoring.ColorTypes.String) + ";";
                     execute = $"{entity} = {awaitStr} conn.QuerySingleAsync<{returnObj}>({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
                 case CRUDTypes.Update:
                     returnObj = ColorTheType("bool");
-                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"UPDATE {table.Name} SET {columns.ToCommaList()} WHERE {where.ToCommaList()}\"", CodeColoring.ColorTypes.String) + ";";
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"UPDATE {table.Name} SET {columns.ToCommaList()} WHERE {whereStr}\"", CodeColoring.ColorTypes.String) + ";";
                     execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
                 case CRUDTypes.Delete:
                     returnObj = ColorTheType("bool");
-                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"DELETE {table.Name} WHERE {where.ToCommaList()}\"", CodeColoring.ColorTypes.String) + ";";
+                    sql = $"{stringSql} = " + CSharpPalette.Color($"\"DELETE {table.Name} WHERE {whereStr}\"", CodeColoring.ColorTypes.String) + ";";
                     execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
             }
@@ -1017,9 +1050,9 @@ namespace Codeterpret.Implementations.BackEnd
                          + "\n"
                          + $"{namespaceStr} {projectName}.Services\n"
                          + "{\n"
-                         + $"    {publicClass} {serviceName} : {interfaceName}\n"
+                         + $"    {publicClass} {CSharpPalette.Color(serviceName, CodeColoring.ColorTypes.ClassName)} : {CSharpPalette.Color(interfaceName, CodeColoring.ColorTypes.InterfaceName)}\n"
                          + "    {\n"
-                         + "        private string _connectionString;\n\n"
+                         + $"        {privateStr} {ColorTheTypeAndParam("string", "_connectionString")};\n\n"
                          + $"{code.Indent('\t', 1)}"
                          + "    }\n"
                          + "}";
