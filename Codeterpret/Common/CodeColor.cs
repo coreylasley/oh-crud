@@ -17,7 +17,8 @@ namespace Codeterpret.Common
         public enum ColorPalettes
         {
             None,
-            CSharp_VSDark
+            CSharp_VSDark,
+            TypeScript_VSDark
         }
 
         public enum ColorTypes
@@ -74,6 +75,27 @@ namespace Codeterpret.Common
                     break;
 
                 case ColorPalettes.CSharp_VSDark:
+                    // Defaults based on C# / Visual Studio / Dark Mode
+                    ColorCodes = new Dictionary<ColorTypes, string>();
+                    ColorCodes.Add(ColorTypes.Default, "#dcdcdc");
+                    ColorCodes.Add(ColorTypes.Background, "#1e1e1e");
+                    ColorCodes.Add(ColorTypes.MethodName, "#4ec9b0");
+                    ColorCodes.Add(ColorTypes.MethodCall, "#dcdcaa");
+                    ColorCodes.Add(ColorTypes.ClassName, "#4ec9b0");
+                    ColorCodes.Add(ColorTypes.InterfaceName, "#b8d7a3");
+                    ColorCodes.Add(ColorTypes.Type, "#4ec9b0");
+                    ColorCodes.Add(ColorTypes.PrimitiveType, "#559ad3");
+                    ColorCodes.Add(ColorTypes.Operator, "#dcdcdc");
+                    ColorCodes.Add(ColorTypes.Flow, "#d8a0df");
+                    ColorCodes.Add(ColorTypes.Enum, "#b8d7a3");
+                    ColorCodes.Add(ColorTypes.Parameter, "#9cdcfe");
+                    ColorCodes.Add(ColorTypes.Property, "#dcdcdc");
+                    ColorCodes.Add(ColorTypes.String, "#d69d85");
+                    ColorCodes.Add(ColorTypes.Comment, "#608b4e");
+                    ColorCodes.Add(ColorTypes.Accessibility, "#559ad3");
+                    break;
+
+                case ColorPalettes.TypeScript_VSDark:
                     // Defaults based on C# / Visual Studio / Dark Mode
                     ColorCodes = new Dictionary<ColorTypes, string>();
                     ColorCodes.Add(ColorTypes.Default, "#dcdcdc");

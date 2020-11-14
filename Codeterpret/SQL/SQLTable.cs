@@ -21,12 +21,18 @@ namespace Codeterpret.SQL
         public bool GenerateRead { get; set; }
         public bool GenerateUpdate { get; set; }
         public bool GenerateDelete { get; set; }
+        public bool GenerateListsByForeignKeys { get; set; }
+        public bool GenerateSearch { get; set; }
 
+
+        /// <summary>
+        /// Should this table be used in code generation
+        /// </summary>
         public bool IncludeThisTable { 
         
             get
             {
-                return GenerateCreate || GenerateRead || GenerateUpdate || GenerateDelete;
+                return GenerateCreate || GenerateRead || GenerateUpdate || GenerateDelete || GenerateListsByForeignKeys;
             }
         
         }
@@ -40,6 +46,7 @@ namespace Codeterpret.SQL
             {
                 List<SQLColumn> ret = new List<SQLColumn>();
 
+                // An Identity/Unique Column is king!
                 SQLColumn identity = SQLColumns.FirstOrDefault(x => x.IsIdentity || x.IsUnique);
                 if (identity != null)
                 {
@@ -47,6 +54,7 @@ namespace Codeterpret.SQL
                 }
                 else
                 {
+                    // No Identity/Unique column? Ok, we will use Primary Key columns...
                     List<SQLColumn> pks = PrimaryKeys;
                     if (pks != null && pks.Count > 0)
                     {
@@ -54,11 +62,15 @@ namespace Codeterpret.SQL
                     }
                     else
                     {
+                        // No Primary Key columns? I guess we will have to role with Foreign Key columns. Not ideal, but if the Foreign Keys, in combination, were intended to be like Primary Keys, this will do the job for CRUD
                         List<SQLColumn> fks = SQLColumns.Where(x => x.ForeignKey != null).ToList();
                         if (fks != null && fks.Count > 0)
                         {
-
                             ret.AddRange(fks);
+                        }
+                        else // Last, and absolutely least... If we make it to this point, the table isn't structured very well at all, and every column is basically needed to identify a specific record in a query
+                        {
+                            ret.AddRange(SQLColumns);
                         }
                     }
                 }

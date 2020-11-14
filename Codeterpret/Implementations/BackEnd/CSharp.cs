@@ -139,9 +139,14 @@ namespace Codeterpret.Implementations.BackEnd
             string code = "";
 
             bool seperateFilesPerTable = false;
+            
+            bool useCORS = false;
+            if (group.GetValue("ExpectedProjectType") != "Other") useCORS = true;
 
             ORMTypes ORM = ORMTypes.Dapper;
             if (group.GetValue("ORM").ToLower() == "ado") ORM = ORMTypes.ADO;
+
+            ProjectHiearchy prj = new ProjectHiearchy(projectName);
 
             // If all the table code exists in a single Service and a single Controller....
             if (!seperateFilesPerTable)
@@ -151,59 +156,95 @@ namespace Codeterpret.Implementations.BackEnd
                 controllerMethods = GenerateControllerMethods(tables, fromDBType, "dataService", "DataController", "IDataService", false);
                 models = GenerateModels(tables, fromDBType, projectName);
 
+                // --------------------------------
                 // --- CONTROLLERS ----------------
+                // --------------------------------
                 code = "";
                 foreach (string s in controllerMethods)
                 {
                     code += s + "\n\n";
                 }
 
-                ret[0].Items.Add(new ProjectItem { Name = "Controllers", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[0].Items.Add(new ProjectItem { Name = "DataController.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateControllerClass(projectName, "Crud", "controller", code)) : CSharpPalette.RenderWithNoColor(GenerateControllerClass(projectName, "Crud", "controller", code)) });
-
+                prj.Add(@"\Controllers\DataController.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ? 
+                    CSharpPalette.RenderWithColor(GenerateControllerClass(projectName, "Crud", "controller", code)) : 
+                    CSharpPalette.RenderWithNoColor(GenerateControllerClass(projectName, "Crud", "controller", code))
+                    );
+                                
 
                 code = "";
+                // --------------------------------
                 // --- INTERFACES -----------------
+                // --------------------------------
                 foreach (string s in interfaceMethods)
                 {
                     code += s + "\n\n";
                 }
-                //WriteFile(rootPath + "Interfaces\\IDataService.cs", code);
-                ret[0].Items.Add(new ProjectItem { Name = "Interfaces", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[1].Items.Add(new ProjectItem { Name = "IDataService.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateInterfaceClass(projectName, "IDataService", code)) : CSharpPalette.RenderWithNoColor(GenerateInterfaceClass(projectName, "IDataService", code))});
 
-
-                code = "";
+                prj.Add(@"\Interfaces\IDataService.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ? 
+                    CSharpPalette.RenderWithColor(GenerateInterfaceClass(projectName, "IDataService", code)) : 
+                    CSharpPalette.RenderWithNoColor(GenerateInterfaceClass(projectName, "IDataService", code))
+                    );
+                                
+                // --------------------------------
                 // --- MODELS ---------------------
-                ret[0].Items.Add(new ProjectItem { Name = "Models", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
+                // --------------------------------
                 for (int x = 0; x < models.Count; x++)
                 {
+                    
                     if (tables[x].IncludeThisTable)
-                        ret[0].Items[2].Items.Add(new ProjectItem { Name = tables[x].Name + ".cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(models[x]) : CSharpPalette.RenderWithNoColor(models[x])});
+                        prj.Add($@"\Models\{tables[x].Name}.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            CSharpPalette.RenderWithColor(models[x]) :
+                            CSharpPalette.RenderWithNoColor(models[x])
+                            );
                 }
 
-
+                // ---------------------------------
                 // --- SERVICES --------------------
+                // ---------------------------------
                 code = "";
                 foreach (string s in serviceMethods)
                 {
                     code += s + "\n\n";
                 }
 
-                ret[0].Items.Add(new ProjectItem { Name = "Services", ItemType = ItemTypes.Folder, Items = new List<ProjectItem>() });
-                ret[0].Items[3].Items.Add(new ProjectItem { Name = "DataService.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateServiceClass(projectName, "DataService", "IDataService", code)) : CSharpPalette.RenderWithNoColor(GenerateServiceClass(projectName, "DataService", "IDataService", code)) });
+                prj.Add($@"\Services\DataService.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            CSharpPalette.RenderWithColor(GenerateServiceClass(projectName, "DataService", "IDataService", code)) :
+                            CSharpPalette.RenderWithNoColor(GenerateServiceClass(projectName, "DataService", "IDataService", code))
+                            );
 
-               
+
+                // --------------------------------------
                 // --- MISC PROJECT FILES ---------------
-                ret[0].Items.Add(new ProjectItem { Name = projectName + ".csproj", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? NoPalette.RenderWithColor(GenerateProjectCSPROJ()) : NoPalette.RenderWithNoColor(GenerateProjectCSPROJ()) });
-                ret[0].Items.Add(new ProjectItem { Name = "Program.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateProgramCS(projectName)) : CSharpPalette.RenderWithNoColor(GenerateProgramCS(projectName)) });
+                // --------------------------------------
+                prj.Add($@"{projectName}.csproj", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            NoPalette.RenderWithColor(GenerateProjectCSPROJ()) :
+                            NoPalette.RenderWithNoColor(GenerateProjectCSPROJ())
+                            );
 
+                prj.Add($@"Program.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            CSharpPalette.RenderWithColor(GenerateProgramCS(projectName)) :
+                            CSharpPalette.RenderWithNoColor(GenerateProgramCS(projectName))
+                            );
+
+                
                 Dictionary<string, string> IandS = new Dictionary<string, string>();
                 IandS.Add("IDataService", "DataService");
-                ret[0].Items.Add(new ProjectItem { Name = "Startup.cs", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? CSharpPalette.RenderWithColor(GenerateStartupCS(projectName, IandS)) : CSharpPalette.RenderWithNoColor(GenerateStartupCS(projectName, IandS)) });
-                ret[0].Items.Add(new ProjectItem { Name = "Dockerfile", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? NoPalette.RenderWithColor(GenerateDockerFile(projectName)) : NoPalette.RenderWithNoColor(GenerateDockerFile(projectName)) });
-                ret[0].Items.Add(new ProjectItem { Name = "README.md", ItemType = ItemTypes.SourceCode, Code = outputType == FileOutputTypes.HTML ? NoPalette.RenderWithColor(GenerateREADME(projectName, tables)) : NoPalette.RenderWithNoColor(GenerateREADME(projectName, tables)) });
 
+                prj.Add($@"Startup.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            CSharpPalette.RenderWithColor(GenerateStartupCS(projectName, IandS, useCORS)) :
+                            CSharpPalette.RenderWithNoColor(GenerateStartupCS(projectName, IandS, useCORS))
+                            );
+
+                prj.Add($@"Dockerfile", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            NoPalette.RenderWithColor(GenerateDockerFile(projectName)) :
+                            NoPalette.RenderWithNoColor(GenerateDockerFile(projectName))
+                            );
+
+                prj.Add($@"README.md", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
+                            NoPalette.RenderWithColor(GenerateREADME(projectName, tables)) :
+                            NoPalette.RenderWithColor(GenerateREADME(projectName, tables))
+                            );
+               
             }
             else // If we want each table represented in its own Service and Controller
             {
@@ -257,9 +298,10 @@ namespace Codeterpret.Implementations.BackEnd
             }
             */
 
-            return ret;
+            return prj.Items;
 
         }
+
 
         public override List<SQLTable> GenerateSQLTables(string code, bool addIDColumnIfMissing = true)
         {
@@ -1255,7 +1297,7 @@ namespace Codeterpret.Implementations.BackEnd
             return code;
         }
 
-        private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices)
+        private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices, bool useCORS)
         {
             
             string appStr = CSharpPalette.Color("app", CodeColoring.ColorTypes.Parameter);
@@ -1297,8 +1339,20 @@ namespace Codeterpret.Implementations.BackEnd
                             string line = $"            {servicesStr}.AddSingleton{CodeColoring.LessThanAlternate}{CSharpPalette.Color(i.Key, CodeColoring.ColorTypes.InterfaceName)}, {CSharpPalette.Color(i.Value, CodeColoring.ColorTypes.ClassName)}{CodeColoring.GreateThanAlternate}();\n";
                             code += line;
                         }
-            
-                   code += "        }\n"
+
+                        if (useCORS)
+                        {
+                            code += $"            {servicesStr}.AddCors(options =>\n"
+                            + "                  {\n"
+                            + "                    options.AddPolicy(\"CorsPolicy\",\n"
+                            + "                        builder => builder.AllowAnyOrigin()\n"
+                            + "                        .AllowAnyMethod()\n"
+                            + "                        .AllowAnyHeader()\n"
+                            + "                        .AllowCredentials());\n"
+                            + "                  });\n\n";
+                        }
+
+            code += "        }\n"
                          + "\n"
                          + $"        {CSharpPalette.Color("// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.", CodeColoring.ColorTypes.Comment)}\n"
                          + $"        {publicVoidStr} {CSharpPalette.Color("Configure", CodeColoring.ColorTypes.MethodCall)}({CodeColoring.LessThanAlternate}{CSharpPalette.Color("IApplicationBuilder", CodeColoring.ColorTypes.InterfaceName)} {appStr}, {CodeColoring.LessThanAlternate}{CSharpPalette.Color("IWebHostEnvironment", CodeColoring.ColorTypes.InterfaceName)} {envStr})\n"
@@ -1312,9 +1366,11 @@ namespace Codeterpret.Implementations.BackEnd
                          + "\n"
                          + $"            {appStr}.UseRouting();\n"
                          + "\n"
-                         + $"            {appStr}.UseAuthorization();\n"
-                         + "\n"
-                         + $"            {appStr}.UseEndpoints(endpoints =>\n"
+                         + $"            {appStr}.UseAuthorization();\n\n";
+
+                         if (useCORS) code += $"            {appStr}.UseCors(\"CorsPolicy\");\n";
+
+                         code += $"            {appStr}.UseEndpoints(endpoints =>\n"
                          + "            {\n"
                          + $"                endpoints.MapControllers();\n"
                          + "            });\n"
