@@ -166,8 +166,8 @@ namespace Codeterpret.Implementations.BackEnd
                 }
 
                 prj.Add(@"\Controllers\DataController.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ? 
-                    CSharpPalette.RenderWithColor(GenerateControllerClass(projectName, "Crud", "controller", code)) : 
-                    CSharpPalette.RenderWithNoColor(GenerateControllerClass(projectName, "Crud", "controller", code))
+                    CSharpPalette.RenderWithColor(GenerateControllerClass(projectName, "Data", "controller", code)) : 
+                    CSharpPalette.RenderWithNoColor(GenerateControllerClass(projectName, "Data", "controller", code))
                     );
                                 
 
@@ -658,19 +658,19 @@ namespace Codeterpret.Implementations.BackEnd
             switch (crudType)
             {
                 case CRUDTypes.Create:
-                    methodName = $"{(asInterface ? MetaComment("Adds a " + table.Name + " record", paramNamesB, table.Name) : "")}\t\t{MethodDefinition(accessible, "Task<" + table.Name + ">", "Add" + table.Name, Params)}{methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Adds a " + table.Name + " record", paramNamesB, table.Name) : "")}{MethodDefinition(accessible, "Task<" + table.Name + ">", "Add" + table.Name, Params)}{methodEnd}";
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Read:
-                    methodName = $"{(asInterface ? MetaComment("Gets a " + table.Name + " record", paramNamesA, table.Name) : "")}\t\t{MethodDefinition(accessible, "Task<" + table.Name + ">", "Get" + table.Name + by, byParams)}{methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Gets a " + table.Name + " record", paramNamesA, table.Name) : "")}{MethodDefinition(accessible, "Task<" + table.Name + ">", "Get" + table.Name + by, byParams)}{methodEnd}";
                     returnType = table.Name;
                     break;
                 case CRUDTypes.Update:
-                    methodName = $"{(asInterface ? MetaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}\t\t{MethodDefinition(accessible, "Task<bool>", "Update" + table.Name, ColorTheTypeAndParam(table.Name, "entity"))}{methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Updates a " + table.Name + " record", new List<string> { table.Name }, "bool representing success") : "")}{MethodDefinition(accessible, "Task<bool>", "Update" + table.Name, ColorTheTypeAndParam(table.Name, "entity"))}{methodEnd}";
                     returnType = "bool";
                     break;
                 case CRUDTypes.Delete:
-                    methodName = $"{(asInterface ? MetaComment("Deletes a " + table.Name + " record", paramNamesA, "bool representing success") : "")}\t\t{MethodDefinition(accessible, "Task<bool>", "Delete" + table.Name + by, byParams)}{methodEnd}";
+                    methodName = $"{(asInterface ? MetaComment("Deletes a " + table.Name + " record", paramNamesA, "bool representing success") : "")}{MethodDefinition(accessible, "Task<bool>", "Delete" + table.Name + by, byParams)}{methodEnd}";
                     returnType = "bool";
                     break;
             }
@@ -683,7 +683,24 @@ namespace Codeterpret.Implementations.BackEnd
             switch (ORM)
             {
                 case ORMTypes.Dapper:
-                    method = $"{methodName}\n\t\t{{\n\t\t\t{ColorTheType(returnType)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)} = {(returnType == "bool" ? $"{falseStr}" : $"{nullStr}" )};\n{GenerateDapperMethodBody(table, fromDBType, crudType)}\n\t\t\t{CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)};\n\t\t}}";
+                    if (crudType == CRUDTypes.Create || crudType == CRUDTypes.Read)
+                    {
+                        method = $"{methodName}\n" +
+                                 $"{{\n" +
+                                 $"    {ColorTheType(returnType)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)} = {(returnType == "bool" ? $"{falseStr}" : $"{nullStr}")};\n" +
+                                 $"{GenerateDapperMethodBody(table, fromDBType, crudType)}\n" +
+                                 $"    {CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow)} {CSharpPalette.Color("entity", CodeColoring.ColorTypes.Parameter)};\n" +
+                                 $"}}";
+                    }
+                    else
+                    {
+                        method = $"{methodName}\n" +
+                                 $"{{\n" +
+                                 $"    {ColorTheType("int")} {CSharpPalette.Color("ret", CodeColoring.ColorTypes.Parameter)} = 0;\n" +
+                                 $"{GenerateDapperMethodBody(table, fromDBType, crudType)}\n" +
+                                 $"    {CSharpPalette.Color("return", CodeColoring.ColorTypes.Flow)} {CSharpPalette.Color("ret", CodeColoring.ColorTypes.Parameter)} > 0;\n" +
+                                 $"}}";
+                    }
                     break;
                 case ORMTypes.ADO:
                     method = $"{methodName}\n\t\t{{\n{GenerateADOMethodBody(table, fromDBType, crudType)}\n}}";
@@ -798,6 +815,7 @@ namespace Codeterpret.Implementations.BackEnd
                 if (ParamsCall != "") ParamsCall += ", ";
 
                 Params += $"{ColorTheTypeAndParam(c.CSharpType(fromDBType), c.Name)}";
+                ParamsCall += CSharpPalette.Color(c.Name, CodeColoring.ColorTypes.Parameter);
                 Route += $"{{{c.Name}}}/";
             }
                       
@@ -816,7 +834,7 @@ namespace Codeterpret.Implementations.BackEnd
                     break;
                 case CRUDTypes.Read:
                     methodName = RouteAttribute("HttpGet", $"{table.Name}/{byRoute}") + $"\n" + MethodDefinition(accessible, "", $"Get{table.Name}{by}", byParams); 
-                    methodNameCall = $"Read{table.Name}{by}";
+                    methodNameCall = $"Get{table.Name}{by}";
                     call = byParamsCall;
                     callToService = $"{varRet} = {awaitStr} {ServiceName(serviceName)}.{methodNameCall}({call});";
                     condition = $"{retStr} != null";
@@ -893,7 +911,8 @@ namespace Codeterpret.Implementations.BackEnd
             string newStr = CSharpPalette.Color("new", CodeColoring.ColorTypes.PrimitiveType);
 
             string con = GetConnectionType(fromDBType);
-            string body = $"\t\t\t{CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType)} ({ColorTheType(con)} conn = {newStr} {ColorTheType(con)}({CSharpPalette.Color("_connectionString", CodeColoring.ColorTypes.Parameter)}))\n\t\t\t{{\n\t\t\t\t";
+            string body = $"    {CSharpPalette.Color("using", CodeColoring.ColorTypes.PrimitiveType)} ({ColorTheType(con)} conn = {newStr} {ColorTheType(con)}({CSharpPalette.Color("_connectionString", CodeColoring.ColorTypes.Parameter)}))\n" + 
+                $"    {{\n        ";
 
             List<string> columns = new List<string>();
             List<string> variables = new List<string>();
@@ -980,16 +999,19 @@ namespace Codeterpret.Implementations.BackEnd
                 case CRUDTypes.Update:
                     returnObj = ColorTheType("bool");
                     sql = $"{stringSql} = " + CSharpPalette.Color($"\"UPDATE {table.Name} SET {columns.ToCommaList()} WHERE {whereStr}\"", CodeColoring.ColorTypes.String) + ";";
-                    execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
+                    execute = $"ret = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
                 case CRUDTypes.Delete:
                     returnObj = ColorTheType("bool");
                     sql = $"{stringSql} = " + CSharpPalette.Color($"\"DELETE {table.Name} WHERE {whereStr}\"", CodeColoring.ColorTypes.String) + ";";
-                    execute = $"{entity} = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
+                    execute = $"ret = {awaitStr} conn.ExecuteAsync({sqlStr}, {newStr} {{{ovariables.ToCommaList()}}});";
                     break;
             }
 
-            body += $"{sql}\n\t\t\t\tconn.Open();\n\t\t\t\t{execute}\n\t\t\t}}";            
+            body += $"{sql}\n" + 
+                    $"        conn.Open();\n" + 
+                    $"        {execute}\n" + 
+                    $"    }}";            
             
             return body;
         }
@@ -1089,6 +1111,7 @@ namespace Codeterpret.Implementations.BackEnd
                          + $"{usingString} System.Data.SqlClient;\n"
                          + $"{usingString} Dapper;\n"
                          + $"{usingString} {projectName}.Models;\n"
+                         + $"{usingString} {projectName}.Interfaces;\n"
                          + "\n"
                          + $"{namespaceStr} {projectName}.Services\n"
                          + "{\n"

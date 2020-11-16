@@ -8,7 +8,7 @@ using static Codeterpret.Common.Enums;
 
 namespace Codeterpret.Implementations.FrontEnd
 {
-    public class Angular : BackEndCodeBase
+    public class Angular : FrontEndCodeBase
     {
 
         private CodeColoring TSPalette = new CodeColoring(CodeColoring.ColorPalettes.TypeScript_VSDark);

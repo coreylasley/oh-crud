@@ -8,8 +8,8 @@ namespace Codeterpret.Common
 {
     public enum ItemTypes
     {
-        SourceCode = 1,
-        Folder = 2
+        Folder = 1,
+        SourceCode = 2        
     }
 
     public class ProjectHiearchy
@@ -96,7 +96,7 @@ namespace Codeterpret.Common
                 }
             }
 
-            level.Items = level.Items.OrderBy(x => x.Name).ToList();
+            level.Items = level.Items.OrderBy(x => x.ItemType).ThenBy(x => x.Name).ToList();
 
             return level;
         }
