@@ -34,9 +34,13 @@ namespace Codeterpret.Common
         /// <returns></returns>
         public string GetValue(string key)
         {
-            string ret = null;
+            string ret = "";
 
-            ret = Settings.FirstOrDefault(x => x.Key == key)?.Value;
+            var kv = Settings.FirstOrDefault(x => x.Key == key);
+            if (kv != null)
+            {
+                ret = kv.Value;
+            }
 
             return ret;
         }

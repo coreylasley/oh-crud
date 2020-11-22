@@ -135,28 +135,48 @@
                 break;
         }
 
-        var setting = settings.Settings.FirstOrDefault(x => x.Key == key);
-        if (setting != null)
+        for (int x = 0; x < settings.Settings.Count; x++)
         {
-            setting.Value = value;
-
-            int displayChangeCount = 0;
-
-            foreach (var os in settings.Settings.Where(x => x.OnlyDisplayWhenKey == key))
+            if (settings.Settings[x].Key == key)
             {
-                if (!os.OnlyDisplayWhenValueMultiValues)
-                {
-                    os.Display = os.OnlyDisplayWhenValue == value;
-                }
-                else
-                {
-                    os.Display = os.OnlyDisplayWhenValue.Split(',').Contains(value);
-                }
-                displayChangeCount++;
-            }
+                settings.Settings[x].Value = value;
 
-            if (displayChangeCount > 0)
-                StateHasChanged();
+                int displayChangeCount = 0;
+
+                for (int y = 0; y < settings.Settings.Count; y++)
+                {
+                    if (settings.Settings[y].OnlyDisplayWhenValue == key)
+                    {
+                        if (!settings.Settings[y].OnlyDisplayWhenValueMultiValues)
+                        {
+                            settings.Settings[y].Display = settings.Settings[y].OnlyDisplayWhenValue == value;
+                        }
+                        else
+                        {
+                            settings.Settings[y].Display = settings.Settings[y].OnlyDisplayWhenValue.Split(',').Contains(value);
+                        }
+                        displayChangeCount++;
+                    }
+                }
+
+                /*
+                foreach (var os in settings.Settings.Where(x => x.OnlyDisplayWhenKey == key))
+                {
+                    if (!os.OnlyDisplayWhenValueMultiValues)
+                    {
+                        os.Display = os.OnlyDisplayWhenValue == value;
+                    }
+                    else
+                    {
+                        os.Display = os.OnlyDisplayWhenValue.Split(',').Contains(value);
+                    }
+                    displayChangeCount++;
+                }
+                */
+
+                if (displayChangeCount > 0)
+                    StateHasChanged();
+            }
         }
 
     }

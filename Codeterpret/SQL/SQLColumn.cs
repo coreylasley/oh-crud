@@ -89,7 +89,7 @@ namespace Codeterpret.SQL
                 }
             }
 
-            if (IsNullable) ret += "?";
+            if (IsNullable && ret != "string") ret += "?";
 
             return ret;
         }

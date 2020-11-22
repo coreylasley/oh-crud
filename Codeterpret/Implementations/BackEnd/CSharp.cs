@@ -44,9 +44,13 @@ namespace Codeterpret.Implementations.BackEnd
         private string servicesStr;
         private string nullStr;
         private string falseStr;
+        private string trueStr;
+        private string newStr;
+        private string constStr;
         private string retStr;
         private string varRet;
         private string awaitStr;
+        private string stringStr;
 
         public CSharp()
         {
@@ -59,6 +63,9 @@ namespace Codeterpret.Implementations.BackEnd
             catchStr = CSharpPalette.Color("catch", CodeColoring.ColorTypes.Flow);
             nullStr = CSharpPalette.Color("null", CodeColoring.ColorTypes.PrimitiveType);
             falseStr = CSharpPalette.Color("false", CodeColoring.ColorTypes.PrimitiveType);
+            trueStr = CSharpPalette.Color("true", CodeColoring.ColorTypes.PrimitiveType);
+            newStr = CSharpPalette.Color("new", CodeColoring.ColorTypes.PrimitiveType);
+            constStr = CSharpPalette.Color("const", CodeColoring.ColorTypes.PrimitiveType);
             retStr = CSharpPalette.Color("ret", CodeColoring.ColorTypes.Parameter);
             varRet = CSharpPalette.Color("var", CodeColoring.ColorTypes.PrimitiveType) + " " + retStr;
             awaitStr = CSharpPalette.Color("await", CodeColoring.ColorTypes.PrimitiveType);
@@ -76,7 +83,9 @@ namespace Codeterpret.Implementations.BackEnd
             privateStr = CSharpPalette.Color("private", CodeColoring.ColorTypes.PrimitiveType);
             publicVoidStr = CSharpPalette.Color("public void", CodeColoring.ColorTypes.PrimitiveType);
             servicesStr = CSharpPalette.Color("services", CodeColoring.ColorTypes.Parameter);
+            stringStr = CSharpPalette.Color("string", CodeColoring.ColorTypes.PrimitiveType);
             
+
 
         }
 
@@ -95,31 +104,33 @@ namespace Codeterpret.Implementations.BackEnd
                 so = new List<SettingOption>();
                 so.Add(new SettingOption { Value = "1", Label = "Dapper" });
                 //so.Add(new SettingOption { Value = "2", Label = "ADO.NET" });               
-                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ORM", Label = "Object-Relational Mapping (ORM)", Options = so, Display = true });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ORM", Label = "Object-Relational Mapping (ORM)", Options = so, Value = "1", Display = true });
 
                 so = new List<SettingOption>();
-                so.Add(new SettingOption { Value = "1", Label = "Angular" });
-                so.Add(new SettingOption { Value = "2", Label = "Other" });
-                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ExpectedProjectType", Label = "Expected Front-End Project Type", Options = so, Display = true });
+                so.Add(new SettingOption { Value = "1", Label = "JSON Web Token (JWT)" });
+                so.Add(new SettingOption { Value = "0", Label = "None" });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "Authentication", Label = "Authentication", Options = so, Value = "1", Display = true });
 
                 so = new List<SettingOption>();
                 so.Add(new SettingOption { Value = "1", Label = "Everything in same Class" });
                 //so.Add(new SettingOption { Value = "2", Label = "In Class by Table" });
                 //so.Add(new SettingOption { Value = "3", Label = "In Class by CRUD Operation (i.e. CreateService)" });
-                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ServiceClassOrganization", Label = "Service Class Organization", Options = so, Display = true });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "ServiceClassOrganization", Label = "Service Class Organization", Options = so, Value = "1", Display = true });
                 settings.Settings.Add(new Setting { Type = InputTypes.LineBreak, Display = true });
 
+                settings.Settings.Add(new Setting { Type = InputTypes.Check, Key = "IncludeCORS", Label = "Include CORS", Display = true });
+               
                 settings.Settings.Add(new Setting { Type = InputTypes.Check, Key = "IncludeTest", Label = "Include Unit Test Project", Display = true });
                 settings.Settings.Add(new Setting { Type = InputTypes.LineBreak, Display = true });
 
                 so = new List<SettingOption>();
                 so.Add(new SettingOption { Value = "1", Label = "NUnit" });
                 //so.Add(new SettingOption { Value = "2", Label = "xUnit" });               
-                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "UnitTestFramework", Label = "Unit Test Framework", Options = so, Display = false, OnlyDisplayWhenKey = "IncludeTest", OnlyDisplayWhenValue = "true" });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "UnitTestFramework", Label = "Unit Test Framework", Options = so, Display = false, Value = "1", OnlyDisplayWhenKey = "IncludeTest", OnlyDisplayWhenValue = "true" });
 
                 so = new List<SettingOption>();
                 so.Add(new SettingOption { Value = "1", Label = "Moq" });                               
-                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "MockingLibrary", Label = "Mocking Library", Options = so, Display = false, OnlyDisplayWhenKey = "IncludeTest", OnlyDisplayWhenValue = "true" });
+                settings.Settings.Add(new Setting { Type = InputTypes.Select, Key = "MockingLibrary", Label = "Mocking Library", Options = so, Display = false, Value = "1", OnlyDisplayWhenKey = "IncludeTest", OnlyDisplayWhenValue = "true" });
 
                 return settings;
             }
@@ -141,7 +152,10 @@ namespace Codeterpret.Implementations.BackEnd
             bool seperateFilesPerTable = false;
             
             bool useCORS = false;
-            if (group.GetValue("ExpectedProjectType") != "Other") useCORS = true;
+            if (group.GetValue("IncludeCORS") == "true") useCORS = true;
+
+            bool useJWT = false;
+            if (group.GetValue("Authentication") == "1") useJWT = true;
 
             ORMTypes ORM = ORMTypes.Dapper;
             if (group.GetValue("ORM").ToLower() == "ado") ORM = ORMTypes.ADO;
@@ -217,8 +231,8 @@ namespace Codeterpret.Implementations.BackEnd
                 // --- MISC PROJECT FILES ---------------
                 // --------------------------------------
                 prj.Add($@"{projectName}.csproj", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
-                            NoPalette.RenderWithColor(GenerateProjectCSPROJ()) :
-                            NoPalette.RenderWithNoColor(GenerateProjectCSPROJ())
+                            NoPalette.RenderWithColor(GenerateProjectCSPROJ(useJWT)) :
+                            NoPalette.RenderWithNoColor(GenerateProjectCSPROJ(useJWT))
                             );
 
                 prj.Add($@"Program.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
@@ -231,8 +245,8 @@ namespace Codeterpret.Implementations.BackEnd
                 IandS.Add("IDataService", "DataService");
 
                 prj.Add($@"Startup.cs", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
-                            CSharpPalette.RenderWithColor(GenerateStartupCS(projectName, IandS, useCORS)) :
-                            CSharpPalette.RenderWithNoColor(GenerateStartupCS(projectName, IandS, useCORS))
+                            CSharpPalette.RenderWithColor(GenerateStartupCS(projectName, IandS, useCORS, useJWT)) :
+                            CSharpPalette.RenderWithNoColor(GenerateStartupCS(projectName, IandS, useCORS, useJWT))
                             );
 
                 prj.Add($@"Dockerfile", ItemTypes.SourceCode, outputType == FileOutputTypes.HTML ?
@@ -1300,7 +1314,7 @@ namespace Codeterpret.Implementations.BackEnd
             return code;
         }
 
-        private string GenerateProjectCSPROJ()
+        private string GenerateProjectCSPROJ(bool useJWT)
         {
             string code = "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n\n"
                  + "  <PropertyGroup>\n"
@@ -1309,8 +1323,9 @@ namespace Codeterpret.Implementations.BackEnd
                  + "    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>\n"
                  + "  </PropertyGroup>\n\n"
                  + "  <ItemGroup>\n"
-                 + "    <PackageReference Include=\"Dapper\" Version=\"2.0.35\" />\n"
-                 + "    <PackageReference Include=\"Microsoft.VisualStudio.Azure.Containers.Tools.Targets\" Version=\"1.10.9\" />\n"
+                 + "    <PackageReference Include=\"Dapper\" Version=\"2.0.35\" />\n";
+            if (useJWT) code += "    <PackageReference Include=\"Microsoft.AspNetCore.Authentication.JwtBearer\" Version=\"3.1.10\" />\n";
+                 code += "    <PackageReference Include=\"Microsoft.VisualStudio.Azure.Containers.Tools.Targets\" Version=\"1.10.9\" />\n"
                  + "    <PackageReference Include=\"System.Data.SqlClient\" Version=\"4.8.2\" />\n"
                  + "  </ItemGroup>\n\n"
                  + "</Project>";
@@ -1320,7 +1335,7 @@ namespace Codeterpret.Implementations.BackEnd
             return code;
         }
 
-        private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices, bool useCORS)
+        private string GenerateStartupCS(string projectName, Dictionary<string, string> interfacesAndServices, bool useCORS, bool useJWT)
         {
             
             string appStr = CSharpPalette.Color("app", CodeColoring.ColorTypes.Parameter);
@@ -1337,15 +1352,17 @@ namespace Codeterpret.Implementations.BackEnd
                          + $"{usingString} Microsoft.Extensions.Configuration;\n"
                          + $"{usingString} Microsoft.Extensions.DependencyInjection;\n"
                          + $"{usingString} Microsoft.Extensions.Hosting;\n"
-                         + $"{usingString} Microsoft.Extensions.Logging;\n"
-                         + $"{usingString} {projectName}.Interfaces;\n"
+                         + $"{usingString} Microsoft.Extensions.Logging;\n";
+            if (useJWT) code += $"{usingString} Microsoft.AspNetCore.Authentication.JwtBearer;\n{usingString} Microsoft.IdentityModel.Tokens;\n";
+                   code += $"{usingString} {projectName}.Interfaces;\n"
                          + $"{usingString} {projectName}.Services;\n"
                          + "\n"
                          + $"{namespaceStr} {projectName}\n"
                          + "{\n"
                          + $"    {publicClass} {CSharpPalette.Color("Startup", CodeColoring.ColorTypes.ClassName)}\n"
-                         + "    {\n"
-                         + $"        {publicStr} {CSharpPalette.Color("Startup", CodeColoring.ColorTypes.ClassName)}({CSharpPalette.Color("IConfiguration", CodeColoring.ColorTypes.InterfaceName)} {CSharpPalette.Color("configuration", CodeColoring.ColorTypes.Parameter)})\n"
+                         + "    {\n";
+       if (useJWT) code += $"        {publicStr} {constStr} {stringStr} jwtSecret = {CSharpPalette.Color("\"Replace this text with a string to sign your tokens, it can be anything\"", CodeColoring.ColorTypes.String)};\n\n";
+                   code += $"        {publicStr} {CSharpPalette.Color("Startup", CodeColoring.ColorTypes.ClassName)}({CSharpPalette.Color("IConfiguration", CodeColoring.ColorTypes.InterfaceName)} {CSharpPalette.Color("configuration", CodeColoring.ColorTypes.Parameter)})\n"
                          + "        {\n"
                          + $"            Configuration = {CSharpPalette.Color("configuration", CodeColoring.ColorTypes.Parameter)};\n"
                          + "        }\n"
@@ -1363,16 +1380,40 @@ namespace Codeterpret.Implementations.BackEnd
                             code += line;
                         }
 
-                        if (useCORS)
+                if (useCORS)
                         {
                             code += $"            {servicesStr}.AddCors(options =>\n"
                             + "                  {\n"
-                            + "                    options.AddPolicy(\"CorsPolicy\",\n"
+                            + $"                    options.AddPolicy({CSharpPalette.Color("\"CorsPolicy\"", CodeColoring.ColorTypes.String)},\n"
                             + "                        builder => builder.AllowAnyOrigin()\n"
                             + "                        .AllowAnyMethod()\n"
                             + "                        .AllowAnyHeader()\n"
                             + "                        .AllowCredentials());\n"
                             + "                  });\n\n";
+                        }
+
+                        if (useJWT)
+                        {
+                string x = CSharpPalette.Color("x", CodeColoring.ColorTypes.Parameter);
+                                    code += $"            {stringStr} key = Encoding.ASCII.GetBytes(jwtSecret);\n"
+                         + $"            \n"
+                         + $"            {servicesStr}.AddAuthentication({x} =>\n"
+                         + "            {\n"
+                         + $"                {x}.DefaultAuthenticateScheme = {CSharpPalette.Color("JwtBearerDefaults", CodeColoring.ColorTypes.ClassName)}.AuthenticationScheme;\n"
+                         + $"                {x}.DefaultChallengeScheme = {CSharpPalette.Color("JwtBearerDefaults", CodeColoring.ColorTypes.ClassName)}.AuthenticationScheme;\n"
+                         + "            })\n"
+                         + $"            .{CSharpPalette.Color("AddJwtBearer", CodeColoring.ColorTypes.MethodCall)}({x} =>\n"
+                         + "            {\n"
+                         + $"                {x}.RequireHttpsMetadata = {trueStr};\n"
+                         + $"                {x}.SaveToken = {trueStr};\n"
+                         + $"                {x}.TokenValidationParameters = {newStr} {CSharpPalette.Color("TokenValidationParameters", CodeColoring.ColorTypes.ClassName)}\n"
+                         + "                {\n"
+                         + $"                    ValidateIssuerSigningKey = {trueStr},\n"
+                         + $"                    IssuerSigningKey = {newStr} {CSharpPalette.Color("SymmetricSecurityKey", CodeColoring.ColorTypes.ClassName)}(key),\n"
+                         + $"                    ValidateIssuer = {falseStr},\n"
+                         + $"                    ValidateAudience = {falseStr}\n"
+                         + "                };\n"
+                         + "            });\n";
                         }
 
             code += "        }\n"
